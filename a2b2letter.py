@@ -166,16 +166,6 @@ if submit:
 
     score = max(score, 5)
 
-    # ================= FEEDBACK DISPLAY =================
-
-    st.markdown("### 📝 Analyse & Feedback")
-    if feedback:
-        st.markdown("**Here are the suggestions and tips for your writing:**")
-        for item in feedback:
-            st.markdown(f"- {item}")
-    else:
-        st.success("✅ Great job! No major issues found.")
-
     # --- Emoji score comment ---
     if score >= 22:
         emoji_comment = "🟢 Excellent! Keep it up."
@@ -184,7 +174,27 @@ if submit:
     else:
         emoji_comment = "🔴 Needs more practice. Review the feedback carefully."
 
+    # ================= PASS/FAIL MESSAGE =================
+
+    if (level == "A2" and score >= 18) or (level in ["B1", "B2"] and score >= 20):
+        st.success("🎉 Good news! Your score is strong enough. You can now submit this letter or essay to your tutor for final review.")
+    else:
+        st.warning("Your writing is developing well but needs some more improvement. Please review the feedback and try to revise before submitting to your tutor. If you feel stuck, you can also ask your tutor for ideas")
+
+    # ================= SHOW SCORE FIRST =================
+
     st.markdown(f"### 🎯 Your Score: **{score} / 25** {emoji_comment}")
+
+    # ================= SHOW FEEDBACK NEXT =================
+
+    st.markdown("### 📝 Analyse & Feedback")
+
+    if feedback:
+        st.markdown("**Here are the suggestions and tips for your writing:**")
+        for item in feedback:
+            st.markdown(f"- {item}")
+    else:
+        st.success("✅ Great job! No major issues found.")
 
     # ================= MISTAKE SUMMARY =================
 
@@ -195,6 +205,7 @@ if submit:
     st.markdown(f"- **Content relevance issues:** {content_issues}")
     st.markdown(f"- **Connector usage issues:** {connector_issues}")
     st.markdown(f"- **Advanced grammar warnings:** {advanced_grammar_warnings}")
+
 
         # ================= PDF GENERATOR FUNCTION =================
 
