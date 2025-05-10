@@ -34,7 +34,7 @@ def grammar_check_with_gpt(text: str):
         messages=[{"role": "user", "content": prompt}],
         temperature=0
     )
-    return response.choices[0].message.content.strip().splitlines()
+    return response["choices"][0]["message"]["content"].strip().splitlines()
 
 # --- GPT-based vocabulary difficulty check ---
 def detect_advanced_vocab(text: str, level: str):
@@ -50,15 +50,10 @@ Text:
         temperature=0
     )
     try:
-        data = json.loads(response.choices[0].message.content)
+        data = json.loads(response["choices"][0]["message"]["content"])
         return data.get("advanced", [])
     except Exception:
         return []
-
-# --- Backwards compatibility patch ---
-if not hasattr(openai, "ChatCompletion"):
-    from openai import chat
-    openai.ChatCompletion = chat.Completion
 
 # --- Main UI ---
 st.title("📄 German Letter & Essay Checker")
