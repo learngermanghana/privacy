@@ -14,17 +14,28 @@ st.set_page_config(
 
 # --- Teacher Settings ---
 st.sidebar.header("Teacher Settings")
-# Always use OpenAI for grammar & spelling
-try:
-    openai.api_key = st.secrets["general"]["OPENAI_API_KEY"]
-except KeyError:
-    env_key = os.getenv("OPENAI_API_KEY")
-    if env_key:
-        openai.api_key = env_key
-    else:
-        st.error(
-            "❌ OpenAI API key not found. Please add it to Streamlit secrets or set OPENAI_API_KEY environment variable."
-        )
+
+# 1) Let teacher optionally enter their OpenAI key
+api_input = st.sidebar.text_input(
+    "OpenAI API Key",
+    type="password",
+    help="Enter your OpenAI API key here (or set it in Streamlit secrets or as env var)."
+)
+
+# 2) Try secrets → env var → sidebar input
+openai.api_key = (
+    st.secrets.get("OPENAI_API_KEY")
+    or os.getenv("OPENAI_API_KEY")
+    or api_input
+)
+
+if not openai.api_key:
+    st.error(
+        "❌ OpenAI API key not found. Please enter it above, "
+        "add it to Streamlit secrets (key: OPENAI_API_KEY), or set the "
+        "OPENAI_API_KEY environment variable."
+    )
+    st.stop()
 
 # Custom phrases
 st.sidebar.markdown(
@@ -257,12 +268,12 @@ if submit:
                 flags=re.I
             )
 
-    # 264) Annotated text rendering (escape newline properly)
+    # Annotated text rendering (escape newline properly)
     safe_ann = ann.replace("\n", "  \n")
     st.markdown("**Annotated Text:**", unsafe_allow_html=True)
     st.markdown(safe_ann, unsafe_allow_html=True)
 
-    # 269) Download feedback (plain text)
+    # Download feedback (plain text)
     feedback_lines = "\n".join(gpt_results)
     feedback_txt = f"Score: {total}/25\n{feedback_lines}"
 
