@@ -1,8 +1,8 @@
-import io
 import re
 from collections import Counter
 
 import streamlit as st
+import openai
 
 # --- Streamlit config ---
 st.set_page_config(
@@ -12,32 +12,115 @@ st.set_page_config(
 
 # --- Teacher Settings ---
 st.sidebar.header("Teacher Settings")
-st.sidebar.markdown("Custom advanced (phrase;replacement) and forbidden phrases for your course.")
-custom_adv = st.sidebar.text_area("Custom advanced (phrase;replacement)", height=100)
-custom_forbidden = st.sidebar.text_area("Custom forbidden phrases", height=100)
+# Always use OpenAI for grammar & spelling
+openai.api_key = st.secrets["general"]["OPENAI_API_KEY"]
 
-# --- LanguageTool setup (cached) ---
-@st.cache_resource
-def get_language_tool():
+st.sidebar.markdown(
+    "Custom advanced (phrase;replacement) and forbidden phrases for your course."
+)
+custom_adv = st.sidebar.text_area(
+    "Custom advanced (phrase;replacement)", height=100
+)
+custom_forbidden = st.sidebar.text_area(
+    "Custom forbidden phrases", height=100
+)
+
+# --- GPT Grammar Checker ---
+def grammar_check_with_gpt(text: str):
+    prompt = (
+        "You are a German language tutor. "
+        "Check the following German text for grammar and spelling errors. "
+        "For each error, return a line in this format:\n"
+        "`<error substring>` ⇒ `<suggestion>` — `<brief English explanation>`\n\n"
+        f"Text:\n{text}"
+    )
+    resp = openai.ChatCompletion.create(
+        model="gpt-3.5-turbo",  # using cost-effective GPT-3.5 Turbo
+        messages=[{"role": "user", "content": prompt}],
+        temperature=0
+    )
+    return resp.choices[0].message.content.strip().splitlines()
+
+# --- Advanced Vocabulary Detection ---
+def detect_advanced_vocab(text: str, level: str):
+    prompt = (
+        f"You are a German language expert. Identify any words in the following German text that exceed the {level} vocabulary level. "
+        "Respond in JSON format: {\"advanced\": [list of words]}\n\n"
+        f"Text:\n{text}"
+    )
+    resp = openai.ChatCompletion.create(
+        model="gpt-3.5-turbo",
+        messages=[{"role": "user", "content": prompt}],
+        temperature=0
+    )
     try:
-        import language_tool_python
-        return language_tool_python.LanguageTool("de-DE", motherTongue="en")
-    except ImportError:
-        return None
+        content = resp.choices[0].message.content.strip()
+        data = __import__('json').loads(content)
+        return data.get("advanced", [])
+    except Exception:
+        return []
 
-lt_tool = get_language_tool()
+# --- Context-Sensitive Tips ---
+TIPS = {
+    'A2_Formal Letter': [
+        'Begin with: "Sehr geehrte Damen und Herren,"',
+        'Einleitung: Begründen Sie kurz Ihr Anliegen.',
+        'Hauptteil: Führen Sie Details aus.',
+        'Schlussteil: Bitten Sie um Rückmeldung.',
+        'Abschluss: "Mit freundlichen Grüßen"'
+    ],
+    'A2_Informal Letter': [
+        'Begin with: "Liebe/r ...,"',
+        'Einleitung: Frage, wie es der Person geht.',
+        'Hauptteil: Erzählen Sie Ihr Anliegen.',
+        'Schlussteil: Bitte um Antwort.',
+        'Abschluss: "Liebe Grüße"'
+    ],
+    'B1_Opinion Essay': [
+        'Einleitung: Thema vorstellen und eigene Meinung ankündigen.',
+        'Hauptteil: Pro-Argumente, Kontra-Argumente.',
+        'Schlussteil: Eigene Stellungnahme.',
+        'Abschluss: Zusammenfassen und Ausblick.'
+    ]
+}
 
-# --- UI ---
+# --- Recommended Structure Slide ---
+st.markdown("## ✏️ Recommended Writing Structure")
+sections = [
+    ("Introduction", "Introduce your topic and state your purpose or opinion."),
+    ("Body", "Provide supporting arguments, examples, or details in clear paragraphs."),
+    ("Conclusion", "Summarize your main points and, if appropriate, include a closing remark.")
+]
+sel = st.select_slider(
+    "Navigate sections:",
+    options=[sec[0] for sec in sections],
+    value=sections[0][0]
+)
+for title, desc in sections:
+    if sel == title:
+        st.markdown(f"**{title}:** {desc}")
+        break
+
+# --- Main UI ---
 st.title("📄 German Letter & Essay Checker")
 st.subheader("By Learn Language Education Academy")
 st.markdown("### ✍️ Structure & Tips")
 
-# --- Input Form ---
+student_name = st.text_input("Enter your name:", value="Student")
+level = st.selectbox("Select your level", ["A2", "B1", "B2"])
+
+tasks = ["Formal Letter", "Informal Letter"]
+if level in ("B1", "B2"):
+    tasks.append("Opinion Essay")
+task_type = st.selectbox("Select your task type", tasks)
+
+key = f"{level}_{task_type.replace(' ', '_')}"
+if key in TIPS:
+    st.markdown("**Tips:**")
+    for tip in TIPS[key]:
+        st.markdown(f"- {tip}")
+
 with st.form("feedback_form"):
-    student_name = st.text_input("Enter your name:", value="Student")
-    level = st.selectbox("Select your level", ["A2", "B1", "B2"])
-    task_opts = ["Formal Letter", "Informal Letter"] + (["Opinion Essay"] if level in ["B1", "B2"] else [])
-    task_type = st.selectbox("Select your task type", task_opts)
     student_letter = st.text_area("Write your letter or essay below:", height=350)
     submit = st.form_submit_button("✅ Submit for Feedback")
 
@@ -45,123 +128,90 @@ if submit:
     text = student_letter.strip()
     if not text:
         st.warning("Please enter your text before submitting.")
+        st.stop()
+
+    # 1) Grammar check (always on)
+    with st.spinner("Checking with GPT…"):
+        try:
+            gpt_results = grammar_check_with_gpt(text)
+        except Exception as e:
+            st.error(f"GPT check failed: {e}")
+            gpt_results = []
+
+    # 1.2) Advanced vocabulary detection for level
+    if level == 'A2':
+        with st.spinner("Checking for advanced vocabulary…"):
+            advanced_words = detect_advanced_vocab(text, level)
+        if advanced_words:
+            sample = ', '.join(advanced_words[:5])
+            st.warning(f"⚠️ Detected advanced vocabulary beyond {level} level: {sample}{'...' if len(advanced_words)>5 else ''}")
+
+    # 2) Vocabulary metrics
+    words = re.findall(r"\w+", text.lower())
+    unique_ratio = len(set(words)) / len(words) if words else 0
+    counts = Counter(words)
+    repeated = [w for w, c in counts.items() if c > 3]
+    repeat_penalty = sum(c - 3 for c in counts.values() if c > 3)
+
+    # 2.1) Readability metrics
+    sentences = [s for s in re.split(r'[.!?]', text) if s.strip()]
+    avg_words_per_sentence = len(words) / len(sentences) if sentences else 0
+    if avg_words_per_sentence <= 12:
+        readability = "Easy"
+    elif avg_words_per_sentence <= 17:
+        readability = "Medium"
     else:
-        # Show spinner while grammar checker loads
-        with st.spinner("Loading grammar checker... please wait..."):
-            matches = lt_tool.check(text) if lt_tool else []
+        readability = "Hard"
+    # Display readability
+    st.markdown(f"🧮 Readability: {readability} ({avg_words_per_sentence:.1f} words/sentence)")
 
-        # Vocabulary metrics
-        words = re.findall(r"\w+", text.lower())
-        unique_ratio = len(set(words)) / len(words) if words else 0
-        counts = Counter(words)
-        repeated = [w for w, c in counts.items() if c > 3]
-        repeat_penalty = sum(c-3 for c in counts.values() if c > 3)
+    # 3) Scoring rubric
+    content_score = 10
+    grammar_score = max(1, 5 - len(gpt_results))
+    vocab_score = min(5, int(unique_ratio * 5))
+    vocab_score = max(1, vocab_score - repeat_penalty)
+    if repeated:
+        vocab_score = max(1, vocab_score - 1)
+    structure_score = 5
+    total = content_score + grammar_score + vocab_score + structure_score
 
-        # Scoring
-        content_score = 10  # full marks
-        grammar_score = max(1, 5 - len(matches))
-        vocab_score = min(5, int(unique_ratio * 5))
-        vocab_score = max(1, vocab_score - repeat_penalty)
-        if repeated:
-            vocab_score = max(1, vocab_score - 1)
-        structure_score = 5  # full marks
-        total = content_score + grammar_score + vocab_score + structure_score
+    # 4) Display breakdown with emojis
+    colors = {'Content':'#4e79a7','Grammar':'#e15759','Vocabulary':'#76b7b2','Structure':'#59a14f'}
+    st.markdown(f"<span style='color:{colors['Content']}'>📖 Content: {content_score}/10</span>", unsafe_allow_html=True)
+    st.markdown(f"<span style='color:{colors['Grammar']}'>✏️ Grammar: {grammar_score}/5</span>", unsafe_allow_html=True)
+    st.markdown(f"<span style='color:{colors['Vocabulary']}'>💬 Vocabulary: {vocab_score}/5</span>", unsafe_allow_html=True)
+    st.markdown(f"<span style='color:{colors['Structure']}'>🔧 Structure: {structure_score}/5</span>", unsafe_allow_html=True)
+    st.markdown(f"🏆 **Total: {total}/25**")
 
-        # Display breakdown
-        st.success(
-            f"Score Breakdown (25 total):\n"
-            f"- Content: {content_score}/10\n"
-            f"- Grammar: {grammar_score}/5\n"
-            f"- Vocabulary: {vocab_score}/5\n"
-            f"- Structure & Coherence: {structure_score}/5\n"
-            f"**Total: {total}/25**"
-        )
+    # 5) Why these scores?
+    st.markdown("**Why these scores?**")
+    st.markdown(f"- 📖 Content: fixed = {content_score}/10")
+    st.markdown(f"- ✏️ Grammar: 5 errors ⇒ {grammar_score}/5")
+    st.markdown(f"- 💬 Vocabulary: ratio {unique_ratio:.2f}, penalties ⇒ {vocab_score}/5")
+    st.markdown(f"- 🔧 Structure: fixed = {structure_score}/5")
 
-        # Pass threshold adjustment
-        threshold = 16 if level == 'A2' else 18
-        if total >= threshold:
-            st.info("Congratulations! You have passed the threshold. You can send this to your tutor for further assessment.")
-        else:
-            st.warning("Score below pass mark. Please review the feedback above. If you’re struggling, contact your tutor for help.")
+    # 6) Determine pass threshold
+    threshold = 18 if level == 'A2' else 20
+    pass_msg = "🎉 You passed! Send this to your tutor for final review." if total >= threshold else "⚠️ Below pass mark. Review feedback or contact your tutor."
+    if total >= threshold:
+        st.info(pass_msg)
+    else:
+        st.warning(pass_msg)
 
-        # Scoring rationale with colored bullets
-        st.markdown("**Scoring Rationale:**")
-        rationale_items = [
-            f"Content: full marks covering all required points ({content_score}/10)",
-            f"Grammar: {grammar_score}/5 (deducted {len(matches)} for errors)",
-            f"Vocabulary: {vocab_score}/5 (unique ratio {unique_ratio:.2f}, penalties {repeat_penalty}{', extra for repetition' if repeated else ''})",
-            f"Structure & Coherence: full marks ({structure_score}/5)"
-        ]
-        colors = ['#4e79a7', '#e15759', '#76b7b2', '#59a14f']
-        for i, item in enumerate(rationale_items):
-            st.markdown(f"<span style='color:{colors[i]}'>• {item}</span>", unsafe_allow_html=True)
+    # 7) Show GPT suggestions
+    if gpt_results:
+        st.markdown("**GPT Grammar Suggestions:**")
+        for line in gpt_results:
+            st.markdown(f"- {line}")
 
-        # Suggestions with translation
-        if matches:
-            st.markdown("**Grammar & Spelling Suggestions (original + English translation):**")
-            translation_map = {
-                "Möglicherweise fehlt ein ‚und‘ oder ein Komma, oder es wurde nach dem Wort ein überflüssiges Leerzeichen eingefügt. Eventuell haben Sie auch versehentlich einen Bindestrich statt eines Punktes eingefügt.":
-                    "Possibly a missing 'und' or comma, or an extra space was inserted after the word. You may also have accidentally used a hyphen instead of a period.",
-                "Möglicher Tippfehler gefunden.": "Possible typo detected.",
-                "Nur hinter einem Komma steht ein Leerzeichen, aber nicht davor.": "There is a space after a comma but not before.",
-                "Es scheint das ‚noch‘ der Wendung ‚weder A noch B‘ zu fehlen.": "It seems the 'noch' in the phrase 'weder A noch B' is missing.",
-                "Hier scheint ein Leerzeichen zu viel zu sein.": "There appears to be one space too many here.",
-                "Außer am Satzanfang werden nur Nomen und Eigennamen großgeschrieben.": "Except at the beginning of a sentence, only nouns and proper names are capitalized.",
-                "Möglicher Tippfehler: mehr als ein Leerzeichen hintereinander": "Possible typo: more than one space in a row.",
-                "Hinter einem Komma sollte ein Leerzeichen stehen.": "After a comma, there should be a space.",
-                "Dieser Satz fängt nicht mit einem großgeschriebenen Wort an.": "This sentence does not start with a capitalized word.",
-                "Möglicherweise passen das Nomen und die Wörter, die das Nomen beschreiben, grammatisch nicht zusammen.": "Possibly the noun and its descriptive words do not grammatically agree.",
-                "Drei aufeinanderfolgende Sätze beginnen mit dem gleichen Wort. Evtl. können Sie den Satz umformulieren, zum Beispiel, indem Sie ein Synonym nutzen.": "Some sentences start with the same word. Consider rephrasing by using a synonym."
-            }
-            for m in matches:
-                seg = m.context[m.offset:m.offset+m.errorLength]
-                orig = m.message
-                trans = translation_map.get(orig, "(English translation not available)")
-                suggs = ', '.join(m.replacements[:3]) or '–'
-                # Color-coded feedback
-                st.markdown(f"<span style='color:#e15759;'>Error in '<strong>{seg}</strong>': {orig}</span>", unsafe_allow_html=True)
-                st.markdown(f"<span style='color:#4e79a7;'>Translation: {trans}</span>", unsafe_allow_html=True)
-                st.markdown(f"<span style='color:#76b7b2;'>German suggestions: {suggs}</span>", unsafe_allow_html=True)
-        # Highlight issues
-        adv = {'berufliches seminar': 'Kurs', 'mehr details': 'mehr Informationen'}
-        for line in custom_adv.splitlines():
-            if ';' in line:
-                k, v = line.split(';', 1)
-                adv[k.strip().lower()] = v.strip()
-        forb = ['weil ich möchte wissen', 'denn ich möchte wissen']
-        for line in custom_forbidden.splitlines():
-            ph = line.strip().lower()
-            if ph:
-                forb.append(ph)
-        manual = {
-            r"\bhabt\s+ein\s+Probleme\b": "habe ein Problem",
-            r"\bein\s+schwarze\b": "ein schwarzes",
-            r"\bin\s+eine\s+Karton\b": "in einen Karton",
-            r"\b8-?monate\b": "8 Monate"
-        }
-        patterns = list(manual.keys()) + [re.escape(p) for p in forb] + [re.escape(a) for a in adv]
-        if level in ['B1', 'B2']:
-            patterns.append(r"\bdu\b")
-        ann = text
-        for pat in patterns:
-            col = "#fffd75"
-            if any(re.fullmatch(re.escape(p), pat, re.I) for p in forb):
-                col = "#fbb"
-            elif any(re.fullmatch(re.escape(a), pat, re.I) for a in adv):
-                col = "#bdf"
-            ann = re.sub(
-                pat,
-                lambda m: f"<span style='background-color:{col}'>{m.group(0)}</span>",
-                ann,
-                flags=re.I
-            )
-        st.markdown("**Annotated Text:**", unsafe_allow_html=True)
-        st.markdown(ann.replace("\n", "  "), unsafe_allow_html=True)
+    # 8) Annotated Text
+    ann = text
+    for line in gpt_results:
+        err = line.split("⇒")[0].strip(" `")
+        ann = re.sub(re.escape(err), f"<span style='background-color:{colors['Grammar']}; color:#fff'>{err}</span>", ann, flags=re.I)
+    st.markdown("**Annotated Text:**", unsafe_allow_html=True)
+    st.markdown(ann.replace("\n", "  \n"), unsafe_allow_html=True)
 
-        # Tip to improve
-        st.info("Tip: Try varying your vocabulary. Use synonyms and avoid repeating the same words.")
-
-        # Download feedback
-        feedback = f"Score: {total}/25\n\n" + "Feedback details:\n"
-        feedback += "\n".join([f"- {m.message}" for m in matches])
-        st.download_button("Download feedback", feedback, file_name="feedback.txt")
+    # 9) Download feedback
+    feedback_txt = f"Score: {total}/25\n" + "\n".join(gpt_results)
+    st.download_button(label="💾 Download feedback", data=feedback_txt, file_name="feedback.txt")
