@@ -15,53 +15,18 @@ st.set_page_config(
 # --- Teacher Settings ---
 st.sidebar.header("Teacher Settings")
 
-# 1) Let teacher optionally enter their OpenAI key
-api_input = st.sidebar.text_input(
-    "OpenAI API Key",
-    type="password",
-    help="Enter your OpenAI API key here (or set it in Streamlit secrets or as env var)."
-)
+# 1) Get the OpenAI key from Streamlit secrets or environment variable
+openai.api_key = st.secrets["general"].get("OPENAI_API_KEY") or os.getenv("OPENAI_API_KEY")
 
-# 2) Try secrets → env var → sidebar input
-openai.api_key = (
-    st.secrets.get("OPENAI_API_KEY")
-    or os.getenv("OPENAI_API_KEY")
-    or api_input
-)
-
+# 2) Check if the API key is found
 if not openai.api_key:
     st.error(
-        "❌ OpenAI API key not found. Please enter it above, "
-        "add it to Streamlit secrets (key: OPENAI_API_KEY), or set the "
+        "❌ OpenAI API key not found. Please add it to Streamlit secrets (key: OPENAI_API_KEY) or set the "
         "OPENAI_API_KEY environment variable."
     )
     st.stop()
 
-# Custom phrases
-st.sidebar.markdown(
-    "Custom advanced (phrase;replacement) and forbidden phrases for your course."
-)
-custom_adv = st.sidebar.text_area(
-    "Custom advanced (phrase;replacement)", height=100
-)
-custom_forbidden = st.sidebar.text_area(
-    "Custom forbidden phrases", height=100
-)
-
-# Valid student IDs (one per line)
-allowed_ids_text = st.sidebar.text_area(
-    "Valid student IDs (one per line)", height=100,
-    help="Enter the list of codes you issued to students"
-)
-allowed_ids = [s.strip() for s in allowed_ids_text.splitlines() if s.strip()]
-
-# Max submissions per student
-max_sub = st.sidebar.number_input(
-    "Max submissions per student this session", min_value=1, max_value=20, value=5,
-    key="max_sub"
-)
-
-# --- Helper Functions ---
+# --- Helper Functions ---  
 def grammar_check_with_gpt(text: str):
     prompt = (
         "You are a German language tutor. "
@@ -120,23 +85,6 @@ TIPS = {
     ]
 }
 
-# Recommended Structure Slide
-st.markdown("## ✏️ Recommended Writing Structure")
-sections = [
-    ("Introduction", "Introduce your topic and state your purpose or opinion."),
-    ("Body", "Provide supporting arguments, examples, or details in clear paragraphs."),
-    ("Conclusion", "Summarize your main points and, if appropriate, include a closing remark.")
-]
-sel = st.select_slider(
-    "Navigate sections:",
-    options=[sec[0] for sec in sections],
-    value=sections[0][0]
-)
-for title, desc in sections:
-    if sel == title:
-        st.markdown(f"**{title}:** {desc}")
-        break
-
 # --- Main UI ---
 st.title("📄 German Letter & Essay Checker")
 st.subheader("By Learn Language Education Academy")
@@ -157,9 +105,6 @@ student_id = st.text_input(
 if not student_id:
     st.warning("Please enter your student ID before submitting.")
     st.stop()
-if allowed_ids and student_id not in allowed_ids:
-    st.error("❌ Invalid student ID. Please use the code provided by your teacher.")
-    st.stop()
 
 # Initialize submission counter per student_id
 sess_key = f"count_{student_id}"
@@ -167,8 +112,8 @@ if sess_key not in st.session_state:
     st.session_state[sess_key] = 0
 
 with st.form("feedback_form"):
-    if st.session_state[sess_key] >= max_sub:
-        st.warning(f"⚠️ You have reached the limit of {max_sub} submissions this session.")
+    if st.session_state[sess_key] >= 5:
+        st.warning(f"⚠️ You have reached the limit of 5 submissions this session.")
         submit = False
     else:
         student_letter = st.text_area("Write your letter or essay below:", height=350)
@@ -188,14 +133,6 @@ if submit:
         except Exception as e:
             st.error(f"GPT check failed: {e}")
             gpt_results = []
-
-    # Advanced vocab for A2
-    if level == 'A2':
-        with st.spinner("Checking for advanced vocabulary…"):
-            advanced_words = detect_advanced_vocab(text, level)
-        if advanced_words:
-            sample = ', '.join(advanced_words[:5])
-            st.warning(f"⚠️ Detected advanced vocabulary beyond {level} level: {sample}{'...' if len(advanced_words)>5 else ''}")
 
     # Vocabulary metrics
     words = re.findall(r"\w+", text.lower())
@@ -251,22 +188,22 @@ if submit:
     else:
         st.warning(pass_msg)
 
-    # GPT suggestions
+    # Show GPT suggestions
     if gpt_results:
         st.markdown("**GPT Grammar Suggestions:**")
         for line in gpt_results:
             st.markdown(f"- {line}")
 
         # Annotated text
-        ann = text
-        for line in gpt_results:
-            err = line.split("⇒")[0].strip(" `")
-            ann = re.sub(
-                re.escape(err),
-                f"<span style='background-color:{colors['Grammar']}; color:#fff'>{err}</span>",
-                ann,
-                flags=re.I
-            )
+    ann = text
+    for line in gpt_results:
+        err = line.split("⇒")[0].strip(" `")
+        ann = re.sub(
+            re.escape(err),
+            f"<span style='background-color:{colors['Grammar']}; color:#fff'>{err}</span>",
+            ann,
+            flags=re.I
+        )
 
     # Annotated text rendering (escape newline properly)
     safe_ann = ann.replace("\n", "  \n")
