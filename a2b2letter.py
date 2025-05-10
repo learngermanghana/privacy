@@ -29,12 +29,12 @@ def grammar_check_with_gpt(text: str):
         "`<error substring>` ⇒ `<suggestion>` — `<brief English explanation>`\n\n"
         f"Text:\n{text}"
     )
-    response = openai.ChatCompletion.create(
+    response = openai.chat.completions.create(
         model="gpt-3.5-turbo",
         messages=[{"role": "user", "content": prompt}],
         temperature=0
     )
-    return response["choices"][0]["message"]["content"].strip().splitlines()
+    return response.choices[0].message.content.strip().splitlines()
 
 # --- GPT-based vocabulary difficulty check ---
 def detect_advanced_vocab(text: str, level: str):
@@ -44,13 +44,13 @@ Respond in JSON format: {{"advanced": ["word1","word2",...]}}
 Text:
 {text}
 """
-    response = openai.ChatCompletion.create(
+    response = openai.chat.completions.create(
         model="gpt-3.5-turbo",
         messages=[{"role": "user", "content": prompt}],
         temperature=0
     )
     try:
-        data = json.loads(response["choices"][0]["message"]["content"])
+        data = json.loads(response.choices[0].message.content)
         return data.get("advanced", [])
     except Exception:
         return []
