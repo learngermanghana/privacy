@@ -55,6 +55,11 @@ Text:
     except Exception:
         return []
 
+# --- Backwards compatibility patch ---
+if not hasattr(openai, "ChatCompletion"):
+    from openai import chat
+    openai.ChatCompletion = chat.Completion
+
 # --- Main UI ---
 st.title("📄 German Letter & Essay Checker")
 st.subheader("By Learn Language Education Academy")
