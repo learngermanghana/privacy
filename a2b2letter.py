@@ -11,13 +11,16 @@ st.set_page_config(page_title="German Letter & Essay Checker", layout="wide")
 # --- Teacher Settings ---
 st.sidebar.header("Teacher Settings")
 
-# ✅ FIX: Correctly access OpenAI key under [general] in secrets.toml or fallback to environment variable
-openai.api_key = st.secrets.get("general", {}).get("OPENAI_API_KEY") or os.getenv("OPENAI_API_KEY")
-if not openai.api_key:
-    st.error("❌ OpenAI API key not found. Add it to Streamlit secrets under [general] or set as environment variable.")
+# ✅ Secure API key retrieval
+api_key = st.secrets.get("general", {}).get("OPENAI_API_KEY") or os.getenv("OPENAI_API_KEY")
+if not api_key:
+    st.error("❌ OpenAI API key not found. Add it to secrets.toml under [general] or set as an environment variable.")
     st.stop()
 
-# --- Helper Functions ---
+# ✅ OpenAI configuration
+openai.api_key = api_key
+
+# --- GPT-based grammar check ---
 def grammar_check_with_gpt(text: str):
     prompt = (
         "You are a German language tutor. "
@@ -26,33 +29,33 @@ def grammar_check_with_gpt(text: str):
         "`<error substring>` ⇒ `<suggestion>` — `<brief English explanation>`\n\n"
         f"Text:\n{text}"
     )
-    resp = openai.ChatCompletion.create(
+    response = openai.ChatCompletion.create(
         model="gpt-3.5-turbo",
         messages=[{"role": "user", "content": prompt}],
         temperature=0
     )
-    return resp.choices[0].message.content.strip().splitlines()
+    return response.choices[0].message.content.strip().splitlines()
 
+# --- GPT-based vocabulary difficulty check ---
 def detect_advanced_vocab(text: str, level: str):
     prompt = f"""
 You are a German language expert. Identify any words in the following German text that exceed the {level} vocabulary level.
 Respond in JSON format: {{"advanced": ["word1","word2",...]}}
-
 Text:
 {text}
 """
-    resp = openai.ChatCompletion.create(
+    response = openai.ChatCompletion.create(
         model="gpt-3.5-turbo",
         messages=[{"role": "user", "content": prompt}],
         temperature=0
     )
     try:
-        data = json.loads(resp.choices[0].message.content)
+        data = json.loads(response.choices[0].message.content)
         return data.get("advanced", [])
     except Exception:
         return []
 
-# --- UI ---
+# --- Main UI ---
 st.title("📄 German Letter & Essay Checker")
 st.subheader("By Learn Language Education Academy")
 st.markdown("### ✍️ Structure & Tips")
@@ -63,9 +66,9 @@ if level in ("B1", "B2"):
     tasks.append("Opinion Essay")
 task_type = st.selectbox("Select your task type", tasks)
 
-student_id = st.text_input("Enter your student ID (provided by your teacher):", value="", key="student_id")
+student_id = st.text_input("Enter your student name (recognized by your teacher):", value="", key="student_id")
 if not student_id:
-    st.warning("Please enter your student ID before submitting.")
+    st.warning("Please enter your student name before submitting.")
     st.stop()
 
 sess_key = f"count_{student_id}"
