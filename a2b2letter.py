@@ -147,9 +147,9 @@ if os.path.exists("approved_students.csv"):
         reader = csv.DictReader(f)
         approved_students = {row["student_id"] for row in reader}
 
-student_id = st.text_input("Enter your student name (recognized by your teacher):", value="", key="student_id")
+student_id = st.text_input("Enter your student code (given by your teacher):", value="", key="student_id")
 if not student_id:
-    st.warning("Please enter your student name before submitting.")
+    st.warning("Please enter your student code before submitting.")
     st.stop()
 if student_id not in approved_students:
     st.error("❌ You are not authorized to use this app. Contact your teacher.")
