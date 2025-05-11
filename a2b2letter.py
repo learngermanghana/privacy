@@ -6,8 +6,11 @@ import streamlit as st
 import openai
 import csv
 
-# --- Streamlit config ---
+# ✅ App by Learn Language Education Academy
+
+import streamlit as st
 st.set_page_config(page_title="German Letter & Essay Checker", layout="wide")
+st.title("📝 German Letter & Essay Checker – Learn Language Education Academy")
 
 # --- Teacher Settings ---
 st.sidebar.header("Teacher Settings")
