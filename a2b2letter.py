@@ -54,12 +54,25 @@ approved_vocab = {
         "anfangen", "vereinbaren", "übernachten", "Rechnung", "Informationen",
         "Anruf", "antworten", "Gebühr", "buchen", "eintragen", "mitnehmen",
         "Unterschrift", "Untersuchung", "Unfall", "abholen", "abgeben",
-        "mitteilen", "erreichen", "eröffnen", "reservieren", "verschieben"
+        "mitteilen", "erreichen", "eröffnen", "reservieren", "verschieben",
+        "freundlichen", "besuchen", "Abendessen", "Restaurant",
+        "bitte", "danke", "Entschuldigung", "Hallo", "Tschüss",
+        "Name", "Adresse", "Telefonnummer", "Straße", "Postleitzahl",
+        "Bahn", "Bus", "Auto", "Fahrrad",
+        "Apotheke", "Supermarkt", "Bäckerei",
+        "heute", "morgen", "jetzt", "später",
+        "schreiben", "lesen", "sehen", "hören"
     ]),
     "A2": set([
         "verstehen", "arbeiten", "lernen", "besuchen", "fahren", "lesen", "helfen",
         "sprechen", "finden", "tragen", "essen", "geben", "wohnen", "spielen",
-        "anmelden", "krankenhaus", "trainingszeiten", "kosten"
+        "anmelden", "krankenhaus", "trainingszeiten", "kosten",
+        "Termin", "Ausweis", "Führerschein", "Öffnungszeiten",
+        "verabreden", "verschieben", "absagen", "einladen",
+        "Reparatur", "Schlüssel", "Nachricht", "E-Mail",
+        "Reise", "Urlaub", "Hotel", "Bahnhof", "Flughafen",
+        "schmecken", "bestellen", "bezahlen", "trinken", "kochen",
+        "Kollege", "Chef", "Arbeit", "Stelle", "Firma"
     ]),
     "B1": set([
         "verstehen", "erklären", "entscheiden", "beantworten", "beschreiben",
