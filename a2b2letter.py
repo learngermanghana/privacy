@@ -47,15 +47,31 @@ def grammar_check_with_gpt(text: str):
     )
     return response.choices[0].message.content.strip().splitlines()
 
-# --- GPT-based vocabulary difficulty check ---
-def detect_advanced_vocab(text: str, level: str):
-    allowed_a1_words = set([
+# --- Approved vocabulary by level ---
+approved_vocab = {
+    "A1": set([
         "Anfrage", "Anmelden", "Terminen", "Preisen", "Kreditkarte", "absagen", 
         "anfangen", "vereinbaren", "übernachten", "Rechnung", "Informationen",
         "Anruf", "antworten", "Gebühr", "buchen", "eintragen", "mitnehmen",
         "Unterschrift", "Untersuchung", "Unfall", "abholen", "abgeben",
         "mitteilen", "erreichen", "eröffnen", "reservieren", "verschieben"
-    ])
+    ]),
+    "A2": set([
+        "verstehen", "arbeiten", "lernen", "besuchen", "fahren", "lesen", "helfen",
+        "sprechen", "finden", "tragen", "essen", "geben", "wohnen", "spielen",
+        "anmelden", "krankenhaus", "trainingszeiten", "kosten"
+    ]),
+    "B1": set([
+        "verstehen", "erklären", "entscheiden", "beantworten", "beschreiben",
+        "entwickeln", "unterstützen", "analysieren", "beteiligen",
+        "beeinflussen", "einflussen"
+    ]),
+    "B2": set([])
+}
+
+# --- GPT-based vocabulary difficulty check ---
+def detect_advanced_vocab(text: str, level: str):
+    allowed_words = approved_vocab.get(level, set())
     prompt = f"""
 You are a German language expert. Identify any words in the following German text that exceed the {level} vocabulary level.
 Respond in JSON format: {{"advanced": ["word1","word2",...]}}
@@ -69,9 +85,10 @@ Text:
     )
     try:
         data = json.loads(response.choices[0].message.content)
-        return [word for word in data.get("advanced", []) if word not in allowed_a1_words or level != "A1"]
+        return [word for word in data.get("advanced", []) if word not in allowed_words]
     except Exception:
         return []
+
 
 # --- A1 Schreiben Tasks ---
 a1_tasks = {
@@ -209,14 +226,16 @@ if submit:
             st.error(f"GPT check failed: {e}")
             gpt_results = []
 
-    try:
-        advanced_words = detect_advanced_vocab(text, level)
-    except Exception as e:
-        advanced_words = []
-        st.warning(f"Vocabulary level check failed: {e}")
-
-    if advanced_words:
-        st.warning(f"⚠️ The following words may be too advanced for {level}-level writing: {', '.join(advanced_words)}")
+    # Only check advanced vocab for A1 and A2
+    advanced_words = []
+    if level in ["A1", "A2"]:
+        try:
+            advanced_words = detect_advanced_vocab(text, level)
+        except Exception as e:
+            st.warning(f"Vocabulary level check failed: {e}")
+        
+        if advanced_words:
+            st.warning(f"⚠️ The following words may be too advanced for {level}-level writing: {', '.join(advanced_words)}")
 
     words = re.findall(r"\w+", text.lower())
     unique_ratio = len(set(words)) / len(words) if words else 0
@@ -280,21 +299,29 @@ if submit:
         for line in gpt_results:
             st.markdown(f"- {line}")
 
+    # --- Highlight grammar errors and advanced words ---
     ann = text
-    for line in gpt_results:
-        err = line.split("⇒")[0].strip(" `")
-        ann = re.sub(
-            re.escape(err),
-            f"<span style='background-color:{colors['Grammar']}; color:#fff'>{err}</span>",
-            ann,
-            flags=re.I
-        )
 
-    if advanced_words:
+    # Highlight grammar errors first
+    if gpt_results:
+        for line in gpt_results:
+            if "⇒" in line:
+                err = line.split("⇒")[0].strip(" `")
+                pattern = re.escape(err)
+                ann = re.sub(
+                    pattern,
+                    f"<span style='background-color:{colors['Grammar']}; color:#fff'>{err}</span>",
+                    ann,
+                    flags=re.I
+                )
+
+    # Highlight advanced vocabulary only for A1 and A2
+    if level in ["A1", "A2"] and advanced_words:
         for adv in advanced_words:
+            pattern = rf'\b({re.escape(adv)})\b(?![^<]*</span>)'
             ann = re.sub(
-                rf'\b{re.escape(adv)}\b',
-                f"<span title='Too advanced for {level}' style='background-color:{colors['Advanced']}; color:#000'>{adv}</span>",
+                pattern,
+                rf"<span title='Too advanced for {level}' style='background-color:{colors['Advanced']}; color:#000'>\1</span>",
                 ann,
                 flags=re.I
             )
