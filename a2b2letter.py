@@ -224,6 +224,25 @@ if teacher_mode:
 else:
     page = "Student View"
 
+def download_training_data():
+    """
+    Display a download button for the essay_training_data.csv file if it exists.
+    Otherwise, show an info message.
+    """
+    import os
+    import streamlit as st
+
+    if os.path.exists("essay_training_data.csv"):
+        with open("essay_training_data.csv", "rb") as f:
+            st.download_button(
+                "⬇️ Download All Submissions",
+                data=f,
+                file_name="essay_training_data.csv",
+                mime="text/csv"
+            )
+    else:
+        st.info("No training data collected yet.")
+
 # --- TEACHER DASHBOARD ---
 if teacher_mode and page == "Teacher Dashboard":
     st.header("📊 Teacher Dashboard")
@@ -277,26 +296,6 @@ if teacher_mode and page == "Teacher Dashboard":
     st.subheader("Collected Essays (for AI training)")
     download_training_data()
     st.stop()
-
-def download_training_data():
-    """
-    Display a download button for the essay_training_data.csv file if it exists.
-    Otherwise, show an info message.
-    """
-    import os
-    import streamlit as st
-
-    if os.path.exists("essay_training_data.csv"):
-        with open("essay_training_data.csv", "rb") as f:
-            st.download_button(
-                "⬇️ Download All Submissions",
-                data=f,
-                file_name="essay_training_data.csv",
-                mime="text/csv"
-            )
-    else:
-        st.info("No training data collected yet.")
-
 
 # --- STUDENT VIEW ---
 # Always load latest data
