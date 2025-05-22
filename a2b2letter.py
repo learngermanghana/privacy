@@ -273,6 +273,9 @@ if teacher_mode and page == "Teacher Dashboard":
     df = pd.DataFrame(list(log_data.items()), columns=["Student Code","Submissions"])
     st.dataframe(df)
     st.download_button("💾 Download Log", data=df.to_csv(index=False).encode('utf-8'), file_name="submission_log.csv", mime='text/csv')
+    # --- Download all essays for AI training ---
+    st.subheader("Collected Essays (for AI training)")
+    download_training_data()
     st.stop()
 
 def download_training_data():
