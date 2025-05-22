@@ -102,6 +102,32 @@ def load_submission_log():
             for sid, count in csv.reader(f):
                 data[sid] = int(count)
     return data
+def save_for_training(student_id, level, task_type, task_num, student_text, gpt_results, feedback_text):
+    import pandas as pd
+    from datetime import datetime
+
+    # Join grammar suggestions into one string
+    grammar_feedback = "\n".join(gpt_results) if gpt_results else ""
+
+    # Prepare the data row
+    row = {
+        "timestamp": datetime.now(),
+        "student_id": student_id,
+        "level": level,
+        "task_type": task_type,
+        "task_num": task_num,
+        "original_text": student_text,
+        "gpt_grammar_feedback": grammar_feedback,
+        "full_feedback": feedback_text
+    }
+
+    # Save to CSV (append mode)
+    file = "essay_training_data.csv"
+    df = pd.DataFrame([row])
+    if not os.path.exists(file):
+        df.to_csv(file, mode="w", index=False)
+    else:
+        df.to_csv(file, mode="a", header=False, index=False)    
 
 # --- Advanced vocab detection ---
 def detect_advanced_vocab(text: str, level: str, approved_vocab) -> list[str]:
@@ -248,6 +274,26 @@ if teacher_mode and page == "Teacher Dashboard":
     st.dataframe(df)
     st.download_button("💾 Download Log", data=df.to_csv(index=False).encode('utf-8'), file_name="submission_log.csv", mime='text/csv')
     st.stop()
+
+def download_training_data():
+    """
+    Display a download button for the essay_training_data.csv file if it exists.
+    Otherwise, show an info message.
+    """
+    import os
+    import streamlit as st
+
+    if os.path.exists("essay_training_data.csv"):
+        with open("essay_training_data.csv", "rb") as f:
+            st.download_button(
+                "⬇️ Download All Submissions",
+                data=f,
+                file_name="essay_training_data.csv",
+                mime="text/csv"
+            )
+    else:
+        st.info("No training data collected yet.")
+
 
 # --- STUDENT VIEW ---
 # Always load latest data
@@ -398,6 +444,17 @@ if submit:
         st.success(f"✅ You used connectors: {', '.join(used)}")
     else:
         st.info(f"📝 Consider using more connectors for clarity.")
+
+    # Save all relevant submission data for future model training
+    save_for_training(
+        student_id=student_id,
+        level=level,
+        task_type=task_type,
+        task_num=task_num,
+        student_text=student_text,
+        gpt_results=gpt_results,
+        feedback_text=feedback_text
+    )
 
     # --- Highlight grammar errors and advanced words ---
     ann = student_text
