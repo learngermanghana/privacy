@@ -5,6 +5,7 @@ import streamlit as st
 import pandas as pd
 import openai
 import stopwordsiso as stop
+from datetime import datetime
 
 st.set_page_config(page_title="German Letter & Essay Checker", layout="wide")
 st.title("📝 German Letter & Essay Checker – Learn Language Education Academy")
@@ -13,7 +14,7 @@ VOCAB_PATH = "approved_vocab.csv"
 CONNECTOR_PATH = "approved_connectors.csv"
 LOG_PATH = "submission_log.csv"
 
-# -- API Key --
+# --- API Key ---
 api_key = st.secrets.get("general", {}).get("OPENAI_API_KEY") or os.getenv("OPENAI_API_KEY")
 if not api_key:
     st.error("❌ OpenAI API key not found. Add it to secrets.toml under [general] or set as environment variable.")
@@ -21,24 +22,24 @@ if not api_key:
 openai.api_key = api_key
 client = openai.OpenAI(api_key=api_key)
 
-# -- Stopwords and function words --
+# --- Stopwords and function words ---
 german_stopwords = stop.stopwords("de")
 function_words = {w.lower() for w in {
-    "ich","du","er","sie","wir","ihr","mir","mich",
-    "der","die","das","ein","eine",
-    "und","oder","aber","nicht","wie","wann","wo",
-    "sein","haben","können","müssen","wollen","sollen",
-    "bitte","viel","gut","sehr",
-    "wer","was","wann","wo","warum","wie",
+    "ich", "du", "er", "sie", "wir", "ihr", "mir", "mich",
+    "der", "die", "das", "ein", "eine",
+    "und", "oder", "aber", "nicht", "wie", "wann", "wo",
+    "sein", "haben", "können", "müssen", "wollen", "sollen",
+    "bitte", "viel", "gut", "sehr",
+    "wer", "was", "wann", "wo", "warum", "wie",
     "order"
 }}
 advanced_suggestions = {
-    "rechnung":      "zahlung",
+    "rechnung": "zahlung",
     "informationen": "angaben",
-    "deutschkurs":   "kurs",
+    "deutschkurs": "kurs",
 }
 
-# --- Helpers for persistence ---
+# --- Helper functions ---
 def load_vocab_from_csv():
     vocab = {"A1": set(), "A2": set()}
     if os.path.exists(VOCAB_PATH):
@@ -46,7 +47,6 @@ def load_vocab_from_csv():
             for row in csv.reader(f):
                 if len(row) >= 2 and row[0] in vocab:
                     vocab[row[0]].add(row[1].strip().lower())
-    # Defaults for empty vocab files
     if not any(vocab.values()):
         vocab["A1"].update(["bitte", "danke", "tschüss", "möchten", "schreiben", "bezahlen"])
         vocab["A2"].update(["arbeiten", "lernen", "verstehen", "helfen"])
@@ -67,13 +67,12 @@ def load_connectors_from_csv():
                 if len(row) >= 2 and row[0] in conns:
                     items = [w.strip() for w in row[1].split(",") if w.strip()]
                     conns[row[0]].update(items)
-    # Defaults
     if not any(conns.values()):
         conns = {
-            "A1": {"weil","denn","ich möchte wissen","deshalb"},
-            "A2": {"deshalb","deswegen","darum","trotzdem","obwohl","sobald","außerdem","zum Beispiel","und","aber","oder","erstens","zweitens","zum Schluss"},
-            "B1": {"jedoch","allerdings","hingegen","trotzdem","dennoch","folglich","daher","demnach","infolgedenden","deshalb","damit","sofern","falls","währenddessen","inzwischen","mittlerweile","anschließend","schließlich","beispielsweise","zumal","wohingegen","erstens","zweitens","kurzum","zusammenfassend","einerseits","andererseits"},
-            "B2": {"allerdings","dennoch","gleichwohl","demzufolge","mithin","ergo","sodass","obgleich","obschon","wenngleich","ungeachtet","indessen","nichtsdestotrotz","einerseits","andererseits","zumal","insofern","insoweit","demgemäß","zusammenfassend","abschließend","letztendlich"}
+            "A1": {"weil", "denn", "ich möchte wissen", "deshalb"},
+            "A2": {"deshalb", "deswegen", "darum", "trotzdem", "obwohl", "sobald", "außerdem", "zum Beispiel", "und", "aber", "oder", "erstens", "zweitens", "zum Schluss"},
+            "B1": {"jedoch", "allerdings", "hingegen", "trotzdem", "dennoch", "folglich", "daher", "demnach", "infolgedenden", "deshalb", "damit", "sofern", "falls", "währenddessen", "inzwischen", "mittlerweile", "anschließend", "schließlich", "beispielsweise", "zumal", "wohingegen", "erstens", "zweitens", "kurzum", "zusammenfassend", "einerseits", "andererseits"},
+            "B2": {"allerdings", "dennoch", "gleichwohl", "demzufolge", "mithin", "ergo", "sodass", "obgleich", "obschon", "wenngleich", "ungeachtet", "indessen", "nichtsdestotrotz", "einerseits", "andererseits", "zumal", "insofern", "insoweit", "demgemäß", "zusammenfassend", "abschließend", "letztendlich"}
         }
     return conns
 
@@ -102,14 +101,9 @@ def load_submission_log():
             for sid, count in csv.reader(f):
                 data[sid] = int(count)
     return data
+
 def save_for_training(student_id, level, task_type, task_num, student_text, gpt_results, feedback_text):
-    import pandas as pd
-    from datetime import datetime
-
-    # Join grammar suggestions into one string
     grammar_feedback = "\n".join(gpt_results) if gpt_results else ""
-
-    # Prepare the data row
     row = {
         "timestamp": datetime.now(),
         "student_id": student_id,
@@ -120,18 +114,28 @@ def save_for_training(student_id, level, task_type, task_num, student_text, gpt_
         "gpt_grammar_feedback": grammar_feedback,
         "full_feedback": feedback_text
     }
-
-    # Save to CSV (append mode)
     file = "essay_training_data.csv"
     df = pd.DataFrame([row])
     if not os.path.exists(file):
         df.to_csv(file, mode="w", index=False)
     else:
-        df.to_csv(file, mode="a", header=False, index=False)    
+        df.to_csv(file, mode="a", header=False, index=False)
+
+def download_training_data():
+    if os.path.exists("essay_training_data.csv"):
+        with open("essay_training_data.csv", "rb") as f:
+            st.download_button(
+                "⬇️ Download All Submissions",
+                data=f,
+                file_name="essay_training_data.csv",
+                mime="text/csv"
+            )
+    else:
+        st.info("No training data collected yet.")
 
 # --- Advanced vocab detection ---
 def detect_advanced_vocab(text: str, level: str, approved_vocab) -> list[str]:
-    text_norm = text.replace('\u2010','-').replace('\u2011','-')
+    text_norm = text.replace('\u2010', '-').replace('\u2011', '-')
     tokens = re.findall(r"[A-Za-zÄÖÜäöüß\-]+", text_norm)
     allowed = approved_vocab.get(level, set()) | german_stopwords | function_words
     flags = []
@@ -162,7 +166,6 @@ def grammar_check_with_gpt(text: str) -> list[str]:
 def annotate_text(student_text, gpt_results, adv, level):
     ann = student_text
     colors = {'Grammar': '#e15759', 'Advanced': '#f1c232'}
-
     # Highlight grammar errors
     if gpt_results:
         for line in gpt_results:
@@ -175,7 +178,6 @@ def annotate_text(student_text, gpt_results, adv, level):
                             return m.group(0)
                         return f"<span style='background-color:{colors['Grammar']}; color:#fff'>{m.group(0)}</span>"
                     ann = re.sub(pattern, repl_grammar, ann)
-
     # Highlight advanced vocabulary (A1/A2)
     if level in ["A1", "A2"] and adv:
         for word in adv:
@@ -186,33 +188,32 @@ def annotate_text(student_text, gpt_results, adv, level):
                 return (f"<span title='Too advanced for {level}' "
                         f"style='background-color:{colors['Advanced']}; color:#000'>{m.group(1)}</span>")
             ann = re.sub(pattern, repl_advanced, ann)
-
     return ann.replace("\n", "  \n")
 
 # --- A1 tasks (static) ---
 a1_tasks = {
-    1: {"task": "E-Mail an Ihren Arzt: Termin absagen.",        "points": ["Warum schreiben Sie?","Grund für die Absage.","Fragen Sie nach neuem Termin."]},
-    2: {"task": "Einladung an Freund: Feier neuen Jobs.",        "points": ["Warum?","Wann?","Wer soll was mitbringen?"]},
-    3: {"task": "E-Mail an Freund: Besuch ankündigen.",          "points": ["Warum?","Wann?","Was zusammen machen?"]},
-    4: {"task": "E-Mail an Schule: Deutschkurs anfragen.",      "points": ["Warum?","Was möchten Sie wissen?","Wie antworten sie?"]},
-    5: {"task": "E-Mail an Vermieterin: Heizung defekt.",       "points": ["Warum?","Seit wann?","Was soll sie tun?"]},
-    6: {"task": "E-Mail an Freund: neue Wohnung.",              "points": ["Warum?","Wo ist sie?","Was gefällt Ihnen?"]},
-    7: {"task": "E-Mail an Freundin: neue Arbeitsstelle.",      "points": ["Warum?","Wo?","Was machen Sie?"]},
-    8: {"task": "E-Mail an Lehrer: Kurs nicht teilnehmen.",     "points": ["Warum?","Warum kommen Sie nicht?","Was möchten Sie?"]},
-    9: {"task": "E-Mail an Bibliothek: Buch verloren.",         "points": ["Warum?","Welches Buch?","Was möchten Sie?"]},
-    10: {"task": "E-Mail an Freundin: Urlaub planen.",          "points": ["Wohin?","Was machen?","Wann?"]},
-    11: {"task": "E-Mail an Schule: Termin ändern.",           "points": ["Welcher Termin?","Wann haben Sie Zeit?","Warum?"]},
-    12: {"task": "E-Mail an Bruder: Party organisieren.",       "points": ["Wann?","Was soll er mitbringen?","Warum?"]},
-    13: {"task": "E-Mail an Freundin: Sie sind krank.",          "points": ["Warum?","Was machen Sie nicht?","Was sollen Sie tun?"]},
-    14: {"task": "E-Mail an Nachbarn: Urlaub.",                "points": ["Wie lange?","Was sollen Nachbarn?","Warum informieren?"]},
-    15: {"task": "Deutschlehrerin: Prüfung anmelden.",          "points": ["Welche Prüfung?","Warum?","Wann?"]},
-    16: {"task": "Freundin: neuen Computer kaufen.",            "points": ["Warum?","Wo gekauft?","Was gefällt?"]},
-    17: {"task": "Freundin: zusammen Sport.",                  "points": ["Welchen Sport?","Wann?","Warum?"]},
-    18: {"task": "Freund: Hilfe Umzug.",                        "points": ["Wann?","Was soll er tun?","Warum?"]},
-    19: {"task": "Freundin: Fest organisieren.",               "points": ["Wo?","Was machen?","Warum?"]},
-    20: {"task": "Freundin: zusammen kochen.",                "points": ["Was wollen Sie kochen?","Wann?","Warum?"]},
-    21: {"task": "Freund: neuer Job.",                         "points": ["Wo?","Was machen?","Warum?"]},
-    22: {"task": "E-Mail an Schule: Deutschkurs besuchen.",     "points": ["Wann?","Warum?","Was möchten Sie?"]}
+    1: {"task": "E-Mail an Ihren Arzt: Termin absagen.", "points": ["Warum schreiben Sie?", "Grund für die Absage.", "Fragen Sie nach neuem Termin."]},
+    2: {"task": "Einladung an Freund: Feier neuen Jobs.", "points": ["Warum?", "Wann?", "Wer soll was mitbringen?"]},
+    3: {"task": "E-Mail an Freund: Besuch ankündigen.", "points": ["Warum?", "Wann?", "Was zusammen machen?"]},
+    4: {"task": "E-Mail an Schule: Deutschkurs anfragen.", "points": ["Warum?", "Was möchten Sie wissen?", "Wie antworten sie?"]},
+    5: {"task": "E-Mail an Vermieterin: Heizung defekt.", "points": ["Warum?", "Seit wann?", "Was soll sie tun?"]},
+    6: {"task": "E-Mail an Freund: neue Wohnung.", "points": ["Warum?", "Wo ist sie?", "Was gefällt Ihnen?"]},
+    7: {"task": "E-Mail an Freundin: neue Arbeitsstelle.", "points": ["Warum?", "Wo?", "Was machen Sie?"]},
+    8: {"task": "E-Mail an Lehrer: Kurs nicht teilnehmen.", "points": ["Warum?", "Warum kommen Sie nicht?", "Was möchten Sie?"]},
+    9: {"task": "E-Mail an Bibliothek: Buch verloren.", "points": ["Warum?", "Welches Buch?", "Was möchten Sie?"]},
+    10: {"task": "E-Mail an Freundin: Urlaub planen.", "points": ["Wohin?", "Was machen?", "Wann?"]},
+    11: {"task": "E-Mail an Schule: Termin ändern.", "points": ["Welcher Termin?", "Wann haben Sie Zeit?", "Warum?"]},
+    12: {"task": "E-Mail an Bruder: Party organisieren.", "points": ["Wann?", "Was soll er mitbringen?", "Warum?"]},
+    13: {"task": "E-Mail an Freundin: Sie sind krank.", "points": ["Warum?", "Was machen Sie nicht?", "Was sollen Sie tun?"]},
+    14: {"task": "E-Mail an Nachbarn: Urlaub.", "points": ["Wie lange?", "Was sollen Nachbarn?", "Warum informieren?"]},
+    15: {"task": "Deutschlehrerin: Prüfung anmelden.", "points": ["Welche Prüfung?", "Warum?", "Wann?"]},
+    16: {"task": "Freundin: neuen Computer kaufen.", "points": ["Warum?", "Wo gekauft?", "Was gefällt?"]},
+    17: {"task": "Freundin: zusammen Sport.", "points": ["Welchen Sport?", "Wann?", "Warum?"]},
+    18: {"task": "Freund: Hilfe Umzug.", "points": ["Wann?", "Was soll er tun?", "Warum?"]},
+    19: {"task": "Freundin: Fest organisieren.", "points": ["Wo?", "Was machen?", "Warum?"]},
+    20: {"task": "Freundin: zusammen kochen.", "points": ["Was wollen Sie kochen?", "Wann?", "Warum?"]},
+    21: {"task": "Freund: neuer Job.", "points": ["Wo?", "Was machen?", "Warum?"]},
+    22: {"task": "E-Mail an Schule: Deutschkurs besuchen.", "points": ["Wann?", "Warum?", "Was möchten Sie?"]}
 }
 
 # --- Teacher Settings ---
@@ -223,25 +224,6 @@ if teacher_mode:
     page = st.sidebar.radio("Go to:", ["Student View", "Teacher Dashboard"])
 else:
     page = "Student View"
-
-def download_training_data():
-    """
-    Display a download button for the essay_training_data.csv file if it exists.
-    Otherwise, show an info message.
-    """
-    import os
-    import streamlit as st
-
-    if os.path.exists("essay_training_data.csv"):
-        with open("essay_training_data.csv", "rb") as f:
-            st.download_button(
-                "⬇️ Download All Submissions",
-                data=f,
-                file_name="essay_training_data.csv",
-                mime="text/csv"
-            )
-    else:
-        st.info("No training data collected yet.")
 
 # --- TEACHER DASHBOARD ---
 if teacher_mode and page == "Teacher Dashboard":
@@ -289,24 +271,25 @@ if teacher_mode and page == "Teacher Dashboard":
     # --- Submission Log ---
     st.subheader("Submission Log")
     log_data = load_submission_log()
-    df = pd.DataFrame(list(log_data.items()), columns=["Student Code","Submissions"])
+    df = pd.DataFrame(list(log_data.items()), columns=["Student Code", "Submissions"])
     st.dataframe(df)
     st.download_button("💾 Download Log", data=df.to_csv(index=False).encode('utf-8'), file_name="submission_log.csv", mime='text/csv')
+
     # --- Download all essays for AI training ---
     st.subheader("Collected Essays (for AI training)")
     download_training_data()
     st.stop()
 
 # --- STUDENT VIEW ---
-# Always load latest data
 approved_vocab = load_vocab_from_csv()
 student_codes = load_student_codes()
 log_data = load_submission_log()
 connectors_by_level = load_connectors_from_csv()
 
-level = st.selectbox("Select your level", ["A1","A2","B1","B2"])
-tasks = ["Formal Letter","Informal Letter"]
-if level in ("B1","B2"): tasks.append("Opinion Essay")
+level = st.selectbox("Select your level", ["A1", "A2", "B1", "B2"])
+tasks = ["Formal Letter", "Informal Letter"]
+if level in ("B1", "B2"):
+    tasks.append("Opinion Essay")
 task_type = st.selectbox("Select task type", tasks)
 
 st.markdown("### ✍️ Structure & Tips")
@@ -367,7 +350,7 @@ def score_text(student_text, level, gpt_results, adv):
     readability = "Easy" if avg_words <= 12 else "Medium" if avg_words <= 17 else "Hard"
     content_score = 10
     grammar_score = max(1, 5 - len(gpt_results))
-    vocab_score = min(5, int((len(set(words))/len(words))*5))
+    vocab_score = min(5, int((len(set(words)) / len(words)) * 5)) if words else 1
     if adv:
         vocab_score = max(1, vocab_score - 1)
     structure_score = 5
@@ -405,95 +388,101 @@ if submit:
             st.stop()
 
         gpt_results = grammar_check_with_gpt(student_text)
-        adv = detect_advanced_vocab(student_text, level, approved_vocab) if level in ("A1","A2") else []
-
+        adv = detect_advanced_vocab(student_text, level, approved_vocab) if level in ("A1", "A2") else []
         content_score, grammar_score, vocab_score, structure_score, total, unique_ratio, avg_words, readability = score_text(student_text, level, gpt_results, adv)
 
-    log_data[student_id] = log_data.get(student_id, 0) + 1
-    with open(LOG_PATH, "w", encoding="utf-8", newline="") as f:
-        writer = csv.writer(f)
-        for k, v in log_data.items():
-            writer.writerow([k, v])
+        # -- Connectors used --
+        conns = connectors_by_level.get(level, set())
+        used = [c for c in conns if c in student_text.lower()]
 
-    if adv:
-        st.warning(f"⚠️ The following words may be too advanced: {', '.join(adv)}")
+        # -- Generate feedback text first --
+        feedback_text = generate_feedback_text(
+            level, task_type, task, content_score, grammar_score, vocab_score, structure_score,
+            total, gpt_results, adv, used, student_text
+        )
 
-    st.markdown(f"🧮 Readability: {readability} ({avg_words:.1f} w/s)")
-    st.metric("Content", f"{content_score}/10")
-    st.metric("Grammar", f"{grammar_score}/5")
-    st.metric("Vocabulary", f"{vocab_score}/5")
-    st.metric("Structure", f"{structure_score}/5")
-    st.markdown(f"**Total: {total}/25**")
+        # -- Save all relevant submission data for future model training --
+        save_for_training(
+            student_id=student_id,
+            level=level,
+            task_type=task_type,
+            task_num=task_num,
+            student_text=student_text,
+            gpt_results=gpt_results,
+            feedback_text=feedback_text
+        )
 
-    st.markdown("**Why these scores?**")
-    st.markdown(f"- 📖 Content: fixed = {content_score}/10")
-    st.markdown(f"- ✏️ Grammar: {len(gpt_results)} errors ⇒ {grammar_score}/5")
-    st.markdown(f"- 💬 Vocabulary: ratio {unique_ratio:.2f}, penalties ⇒ {vocab_score}/5")
-    st.markdown(f"- 🔧 Structure: fixed = {structure_score}/5")
+        # -- Update submission log --
+        log_data[student_id] = log_data.get(student_id, 0) + 1
+        with open(LOG_PATH, "w", encoding="utf-8", newline="") as f:
+            writer = csv.writer(f)
+            for k, v in log_data.items():
+                writer.writerow([k, v])
 
-    if gpt_results:
-        st.markdown("**Grammar Suggestions:**")
-        for line in gpt_results:
-            st.markdown(f"- {line}")
+        if adv:
+            st.warning(f"⚠️ The following words may be too advanced: {', '.join(adv)}")
 
-    if not teacher_mode:
-        hints = sorted(connectors_by_level.get(level, []))[:4]
-        st.info(f"📝 Try connectors like: {', '.join(hints)}…")
+        st.markdown(f"🧮 Readability: {readability} ({avg_words:.1f} w/s)")
+        st.metric("Content", f"{content_score}/10")
+        st.metric("Grammar", f"{grammar_score}/5")
+        st.metric("Vocabulary", f"{vocab_score}/5")
+        st.metric("Structure", f"{structure_score}/5")
+        st.markdown(f"**Total: {total}/25**")
 
-    conns = connectors_by_level.get(level, set())
-    used = [c for c in conns if c in student_text.lower()]
-    if used:
-        st.success(f"✅ You used connectors: {', '.join(used)}")
-    else:
-        st.info(f"📝 Consider using more connectors for clarity.")
+        st.markdown("**Why these scores?**")
+        st.markdown(f"- 📖 Content: fixed = {content_score}/10")
+        st.markdown(f"- ✏️ Grammar: {len(gpt_results)} errors ⇒ {grammar_score}/5")
+        st.markdown(f"- 💬 Vocabulary: ratio {unique_ratio:.2f}, penalties ⇒ {vocab_score}/5")
+        st.markdown(f"- 🔧 Structure: fixed = {structure_score}/5")
 
-    # Save all relevant submission data for future model training
-    save_for_training(
-        student_id=student_id,
-        level=level,
-        task_type=task_type,
-        task_num=task_num,
-        student_text=student_text,
-        gpt_results=gpt_results,
-        feedback_text=feedback_text
-    )
+        if gpt_results:
+            st.markdown("**Grammar Suggestions:**")
+            for line in gpt_results:
+                st.markdown(f"- {line}")
 
-    # --- Highlight grammar errors and advanced words ---
-    ann = student_text
-    colors = {'Grammar': '#e15759', 'Advanced': '#f1c232'}
+        if not teacher_mode:
+            hints = sorted(connectors_by_level.get(level, []))[:4]
+            st.info(f"📝 Try connectors like: {', '.join(hints)}…")
 
-    # Highlight grammar errors
-    if gpt_results:
-        for line in gpt_results:
-            if "⇒" in line:
-                err = line.split("⇒")[0].strip(" `")
-                pattern = re.escape(err)
+        if used:
+            st.success(f"✅ You used connectors: {', '.join(used)}")
+        else:
+            st.info(f"📝 Consider using more connectors for clarity.")
+
+        # --- Highlight grammar errors and advanced words ---
+        ann = student_text
+        colors = {'Grammar': '#e15759', 'Advanced': '#f1c232'}
+
+        # Highlight grammar errors
+        if gpt_results:
+            for line in gpt_results:
+                if "⇒" in line:
+                    err = line.split("⇒")[0].strip(" `")
+                    pattern = re.escape(err)
+                    ann = re.sub(
+                        pattern,
+                        f"<span style='background-color:{colors['Grammar']}; color:#fff'>{err}</span>",
+                        ann,
+                        flags=re.I
+                    )
+
+        # Highlight advanced vocabulary only for A1 and A2
+        if level in ["A1", "A2"] and adv:
+            for word in adv:
+                pattern = rf"\b({re.escape(word)})\b(?![^<]*</span>)"
                 ann = re.sub(
                     pattern,
-                    f"<span style='background-color:{colors['Grammar']}; color:#fff'>{err}</span>",
+                    rf"<span title='Too advanced for {level}' style='background-color:{colors['Advanced']}; color:#000'>\1</span>",
                     ann,
                     flags=re.I
                 )
+            st.markdown("**📚 Advanced Vocabulary Used:**")
+            for word in adv:
+                st.markdown(f"- {word} _(not recommended for {level})_ ")
 
-    # Highlight advanced vocabulary only for A1 and A2
-    if level in ["A1", "A2"] and adv:
-        for word in adv:
-            pattern = rf"\b({re.escape(word)})\b(?![^<]*</span>)"
-            ann = re.sub(
-                pattern,
-                rf"<span title='Too advanced for {level}' style='background-color:{colors['Advanced']}; color:#000'>\1</span>",
-                ann,
-                flags=re.I
-            )
-        st.markdown("**📚 Advanced Vocabulary Used:**")
-        for word in adv:
-            st.markdown(f"- {word} _(not recommended for {level})_ ")
+        safe_ann = ann.replace("\n", "  \n")
 
-    safe_ann = ann.replace("\n", "  \n")
+        st.markdown("**Annotated Text:**", unsafe_allow_html=True)
+        st.markdown(safe_ann, unsafe_allow_html=True)
 
-    st.markdown("**Annotated Text:**", unsafe_allow_html=True)
-    st.markdown(safe_ann, unsafe_allow_html=True)
-
-
-    feedback_text = generate_feedback_text(level, task_type, task, content_score, grammar_score, vocab_score, structure_score, total, gpt_results, adv, used, student_text)
-    st.download_button("💾 Download feedback", data=feedback_text, file_name="feedback.txt")
+        st.download_button("💾 Download feedback", data=feedback_text, file_name="feedback.txt")
