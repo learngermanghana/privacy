@@ -387,6 +387,25 @@ if teacher_mode:
     page = st.sidebar.radio("Go to:", ["Student View", "Teacher Dashboard"])
 else:
     page = "Student View"
+
+def download_training_data():
+    """Offer the training data CSV as a download in the dashboard."""
+    if os.path.exists(TRAINING_DATA_PATH) and os.stat(TRAINING_DATA_PATH).st_size > 0:
+        with open(TRAINING_DATA_PATH, 'rb') as f:
+            st.download_button(
+                "⬇️ Download All Submissions",
+                data=f,
+                file_name="essay_training_data.csv",
+                mime="text/csv"
+            )
+    else:
+        st.info("No training data collected yet.")
+
+def render_collected_essays_for_training():
+    """Display the AI training data download section in the dashboard."""
+    st.subheader("Collected Essays for AI Training")
+    download_training_data()
+
 # --- Teacher Dashboard ---
 if teacher_mode and page == "Teacher Dashboard":
     st.header("📊 Teacher Dashboard")
