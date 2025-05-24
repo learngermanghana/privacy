@@ -350,8 +350,7 @@ if teacher_mode:
     page = st.sidebar.radio("Go to:", ["Student View", "Teacher Dashboard"])
 else:
     page = "Student View"
-
-# --- TEACHER DASHBOARD ---
+# --- Teacher Dashboard ---
 if teacher_mode and page == "Teacher Dashboard":
     st.header("📊 Teacher Dashboard")
 
@@ -387,7 +386,7 @@ if teacher_mode and page == "Teacher Dashboard":
     if st.button("Add to Student Codes"):
         for code in [s.strip() for s in new_codes.split(',') if s.strip()]:
             student_codes.add(code)
-        with open("student_codes.csv", "w", encoding="utf-8", newline="") as f:
+        with open(STUDENT_CODES_PATH, "w", encoding="utf-8", newline="") as f:
             writer = csv.writer(f)
             writer.writerow(["student_code"])
             for c in sorted(student_codes):
@@ -397,9 +396,14 @@ if teacher_mode and page == "Teacher Dashboard":
     # --- Submission Log ---
     st.subheader("Submission Log")
     log_data = load_submission_log()
-    df = pd.DataFrame(list(log_data.items()), columns=["Student Code","Submissions"])
+    df = pd.DataFrame(list(log_data.items()), columns=["Student Code", "Submissions"])
     st.dataframe(df)
     st.download_button("💾 Download Log", data=df.to_csv(index=False).encode('utf-8'), file_name="submission_log.csv", mime='text/csv')
+
+    # --- Collected Essays for AI Training ---
+    st.subheader("Collected Essays for AI Training")
+    download_training_data()
+    
     st.stop()
 
 # --- STUDENT VIEW ---
