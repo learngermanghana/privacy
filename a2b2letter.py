@@ -6,6 +6,8 @@ import pandas as pd
 import openai
 import stopwordsiso as stop
 
+TRAINING_DATA_PATH = "essay_training_data.csv"
+
 st.set_page_config(page_title="German Letter & Essay Checker", layout="wide")
 st.title("📝 German Letter & Essay Checker – Learn Language Education Academy")
 
