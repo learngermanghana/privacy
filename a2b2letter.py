@@ -423,16 +423,15 @@ if teacher_mode and page == "Teacher Dashboard":
                 writer.writerow([c])
         st.success("✅ Student codes updated.")
 
-    # --- Submission Log ---
+    # Submission Log
     st.subheader("Submission Log")
-    log_data = load_submission_log()
-    df = pd.DataFrame(list(log_data.items()), columns=["Student Code", "Submissions"])
-    st.dataframe(df)
-    st.download_button("💾 Download Log", data=df.to_csv(index=False).encode('utf-8'), file_name="submission_log.csv", mime='text/csv')
+    df_log = pd.DataFrame(load_submission_log().items(), columns=["Student Code","Submissions"])
+    st.dataframe(df_log)
+    st.download_button("💾 Download Log", data=df_log.to_csv(index=False).encode('utf-8'),
+                       file_name="submission_log.csv", mime='text/csv')
 
     # --- Collected Essays for AI Training ---
-    st.subheader("Collected Essays for AI Training")
-    download_training_data()
+    render_collected_essays_for_training()
     
     st.stop()
 
