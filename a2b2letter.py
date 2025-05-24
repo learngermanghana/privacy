@@ -19,8 +19,13 @@ st.markdown("""
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
     header {visibility: hidden;}
+    .css-18ni7ap.e8zbici2 {display: none;}
+    .css-164nlkn.ezrtsby2 {display: none;}
+    .css-1dp5vir.ezrtsby2 {display: none;}
+    div[data-testid="stHeader"] {display: none;}
     </style>
     """, unsafe_allow_html=True)
+
 
 VOCAB_PATH = "approved_vocab.csv"
 CONNECTOR_PATH = "approved_connectors.csv"
