@@ -509,17 +509,40 @@ if submit:
             st.warning("Please enter your text before submitting.")
             st.stop()
 
+        # 1. GPT grammar check
         gpt_results = grammar_check_with_gpt(student_text)
         adv = detect_advanced_vocab(student_text, level, approved_vocab) if level in ("A1","A2") else []
 
-        content_score, grammar_score, vocab_score, structure_score, total, unique_ratio, avg_words, readability = score_text(student_text, level, gpt_results, adv)
+        # 2. Scoring
+        content_score, grammar_score, vocab_score, structure_score, total, unique_ratio, avg_words, readability = \
+            score_text(student_text, level, gpt_results, adv)
 
+        # 3. Generate the full feedback text
+        feedback_text = generate_feedback_text(
+            level, task_type, task,
+            content_score, grammar_score, vocab_score, structure_score, total,
+            gpt_results, adv, [], student_text
+        )
+
+        # 4. **Save this submission for AI training**
+        save_for_training(
+            student_id=student_id,
+            level=level,
+            task_type=task_type,
+            task_num=task_num,
+            student_text=student_text,
+            gpt_results=gpt_results,
+            feedback_text=feedback_text
+        )
+
+    # 5. Update submission log
     log_data[student_id] = log_data.get(student_id, 0) + 1
     with open(LOG_PATH, "w", encoding="utf-8", newline="") as f:
         writer = csv.writer(f)
         for k, v in log_data.items():
             writer.writerow([k, v])
 
+    # 6. Warnings and metrics display
     if adv:
         st.warning(f"⚠️ The following words may be too advanced: {', '.join(adv)}")
 
