@@ -102,11 +102,11 @@ def load_submission_log():
             for sid, count in csv.reader(f):
                 data[sid] = int(count)
     return data
-
 # --- Training Data Helpers ---
 def save_for_training(student_id, level, task_type, task_num, student_text, gpt_results, feedback_text):
+    """Append a student submission (with feedback) to the AI training CSV."""
     row = {
-        "timestamp": datetime.now(),
+        "timestamp": datetime.now().isoformat(timespec="seconds"),
         "student_id": student_id,
         "level": level,
         "task_type": task_type,
@@ -115,16 +115,23 @@ def save_for_training(student_id, level, task_type, task_num, student_text, gpt_
         "gpt_grammar_feedback": "\n".join(gpt_results),
         "full_feedback": feedback_text
     }
+    file_exists = os.path.exists(TRAINING_DATA_PATH)
     df = pd.DataFrame([row])
-    if not os.path.exists(TRAINING_DATA_PATH):
+    if not file_exists or os.stat(TRAINING_DATA_PATH).st_size == 0:
         df.to_csv(TRAINING_DATA_PATH, index=False)
     else:
         df.to_csv(TRAINING_DATA_PATH, mode='a', header=False, index=False)
 
 def download_training_data():
-    if os.path.exists(TRAINING_DATA_PATH):
+    """Offer the training data CSV as a download in the dashboard."""
+    if os.path.exists(TRAINING_DATA_PATH) and os.stat(TRAINING_DATA_PATH).st_size > 0:
         with open(TRAINING_DATA_PATH, 'rb') as f:
-            st.download_button("⬇️ Download All Submissions", data=f, file_name="essay_training_data.csv", mime="text/csv")
+            st.download_button(
+                "⬇️ Download All Submissions",
+                data=f,
+                file_name="essay_training_data.csv",
+                mime="text/csv"
+            )
     else:
         st.info("No training data collected yet.")
 
@@ -422,7 +429,7 @@ if teacher_mode and page == "Teacher Dashboard":
             for c in sorted(student_codes):
                 writer.writerow([c])
         st.success("✅ Student codes updated.")
-
+        
     # Submission Log
     st.subheader("Submission Log")
     df_log = pd.DataFrame(load_submission_log().items(), columns=["Student Code","Submissions"])
@@ -430,9 +437,7 @@ if teacher_mode and page == "Teacher Dashboard":
     st.download_button("💾 Download Log", data=df_log.to_csv(index=False).encode('utf-8'),
                        file_name="submission_log.csv", mime='text/csv')
 
-    # --- Collected Essays for AI Training ---
     render_collected_essays_for_training()
-    
     st.stop()
 
 # --- STUDENT VIEW ---
