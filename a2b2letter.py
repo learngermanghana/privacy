@@ -369,204 +369,145 @@ a1_tasks = {
 st.sidebar.header("🔧 Teacher Settings")
 teacher_password = st.sidebar.text_input("🔒 Enter teacher password", type="password")
 teacher_mode = (teacher_password == "Felix029")
-if teacher_mode:
-    page = st.sidebar.radio("Go to:", ["Student View", "Teacher Dashboard"])
-else:
-    page = "Student View"
+page = st.sidebar.radio("Go to:", ["Student View","Teacher Dashboard"] if teacher_mode else ["Student View"])
 
-# --- TEACHER DASHBOARD ---
+# --- Teacher Dashboard ---
 if teacher_mode and page == "Teacher Dashboard":
     st.header("📊 Teacher Dashboard")
 
-    # ---- VOCABULARY EDITOR ----
+    # Approved Vocabulary Editor
     st.subheader("Edit Approved Vocabulary (A1/A2)")
     vocab = load_vocab_from_csv()
-    for lvl in ["A1", "A2"]:
-        current = ", ".join(sorted(vocab.get(lvl, set())))
-        new_vocab = st.text_area(f"{lvl} Vocabulary (comma-separated):", current, key=f"vocab_{lvl}")
-        if st.button(f"Update {lvl} Vocab", key=f"btn_vocab_{lvl}"):
-            words = {w.strip().lower() for w in new_vocab.split(",") if w.strip()}
-            vocab[lvl] = words
+    for lvl in ["A1","A2"]:
+        txt = ", ".join(sorted(vocab[lvl]))
+        new = st.text_area(f"{lvl} Vocabulary:", txt, key=f"vocab_{lvl}")
+        if st.button(f"Save {lvl}", key=f"save_vocab_{lvl}"):
+            vocab[lvl] = {w.strip().lower() for w in new.split(",") if w.strip()}
             save_vocab_to_csv(vocab)
-            st.success(f"✅ {lvl} vocabulary updated.")
+            st.success(f"{lvl} vocabulary updated.")
 
-    # ---- CONNECTORS EDITOR ----
-    st.subheader("Edit Approved Connectors (A1-B2)")
+    # Approved Connectors Editor
+    st.subheader("Edit Approved Connectors (A1–B2)")
     connectors = load_connectors_from_csv()
-    for lvl in ["A1", "A2", "B1", "B2"]:
-        current = ", ".join(sorted(connectors.get(lvl, set())))
-        new_conns = st.text_area(f"{lvl} Connectors (comma-separated):", current, key=f"conn_{lvl}")
-        if st.button(f"Update {lvl} Connectors", key=f"btn_conn_{lvl}"):
-            items = {c.strip() for c in new_conns.split(",") if c.strip()}
-            connectors[lvl] = items
+    for lvl in ["A1","A2","B1","B2"]:
+        txt = ", ".join(sorted(connectors[lvl]))
+        new = st.text_area(f"{lvl} Connectors:", txt, key=f"conn_{lvl}")
+        if st.button(f"Save {lvl} Connectors", key=f"save_conn_{lvl}"):
+            connectors[lvl] = {c.strip() for c in new.split(",") if c.strip()}
             save_connectors_to_csv(connectors)
-            st.success(f"✅ {lvl} connectors updated.")
+            st.success(f"{lvl} connectors updated.")
 
-    # --- Student Codes Editor ---
+    # Student Codes Editor
     st.subheader("Student Codes")
-    student_codes = load_student_codes()
-    st.write(sorted(student_codes))
-    new_codes = st.text_area("Add student codes (comma-separated):")
-    if st.button("Add to Student Codes"):
-        for code in [s.strip() for s in new_codes.split(',') if s.strip()]:
-            student_codes.add(code)
-        with open("student_codes.csv", "w", encoding="utf-8", newline="") as f:
-            writer = csv.writer(f)
-            writer.writerow(["student_code"])
-            for c in sorted(student_codes):
-                writer.writerow([c])
-        st.success("✅ Student codes updated.")
+    codes = load_student_codes()
+    st.write(sorted(codes))
+    add = st.text_area("Add codes (comma-separated):")
+    if st.button("Add Codes"):
+        for c in [x.strip() for x in add.split(",") if x.strip()]:
+            codes.add(c)
+        with open(STUDENT_CODES_PATH,"w",newline="",encoding="utf-8") as f:
+            w = csv.writer(f); w.writerow(["student_code"])
+            for c in sorted(codes): w.writerow([c])
+        st.success("Student codes updated.")
 
-    # --- Submission Log ---
+    # Submission Log
     st.subheader("Submission Log")
-    log_data = load_submission_log()
-    df = pd.DataFrame(list(log_data.items()), columns=["Student Code", "Submissions"])
-    st.dataframe(df)
-    st.download_button("💾 Download Log", data=df.to_csv(index=False).encode('utf-8'), file_name="submission_log.csv", mime='text/csv')
+    log = load_submission_log()
+    df_log = pd.DataFrame(log.items(),columns=["Code","Count"])
+    st.dataframe(df_log)
+    st.download_button("Download Log", data=df_log.to_csv(index=False), file_name="submission_log.csv")
 
-    # --- Download all essays for AI training ---
-    st.subheader("Collected Essays (for AI training)")
+    # Collected Essays for Training
+    st.subheader("Collected Essays for Training")
     download_training_data()
     st.stop()
 
-# --- STUDENT VIEW ---
-approved_vocab = load_vocab_from_csv()
+# --- Student View ---
+connectors_by_level = load_connectors_from_csv()
 student_codes = load_student_codes()
 log_data = load_submission_log()
-connectors_by_level = load_connectors_from_csv()
 
-level = st.selectbox("Select your level", ["A1", "A2", "B1", "B2"])
-tasks = ["Formal Letter", "Informal Letter"]
-if level in ("B1", "B2"):
-    tasks.append("Opinion Essay")
+level = st.selectbox("Select your level", ["A1","A2","B1","B2"])
+tasks = ["Formal Letter","Informal Letter"] + (["Opinion Essay"] if level in ("B1","B2") else [])
 task_type = st.selectbox("Select task type", tasks)
 
 st.markdown("### ✍️ Structure & Tips")
-with st.expander("✍️ Writing Tips and Usage Advice"):
-    if level == "A1":
-        st.markdown(
-            "- Use simple present tense (ich bin, ich habe, ich wohne...)\n"
-            "- Keep sentences short and clear\n"
-            "- Use basic connectors und, aber, weil\n"
-            "- Avoid complex verbs or modal structures\n"
-            "- Always start sentences with a capital letter"
-        )
-    elif level == "A2":
-        st.markdown("- Explain reasons using weil and denn\n- Add time expressions (z.B. am Montag, um 8 Uhr)\n- Include polite forms like ich möchte, könnten Sie?")
-    elif level == "B1":
-        st.markdown("- Include both pros and cons in essays\n- Use connectors like einerseits...andererseits, deshalb, trotzdem\n- Vary sentence structure with subordinates")
+with st.expander("✍️ Writing Tips"):
+    if level=="A1":
+        st.markdown("- Ich bin… / Ich habe…\n- Kurze Sätze\n- und, aber, weil\n- Großschreibung von Nomen")
+    elif level=="A2":
+        st.markdown("- Gründe mit weil/denn\n- Zeitangaben (z.B. am Montag)\n- Höflichkeitsformen")
+    elif level=="B1":
+        st.markdown("- Pro-und-Kontra\n- einerseits…andererseits\n- Nebensätze")
     else:
-        st.markdown("- Support opinions with examples and evidence\n- Use passive voice and indirect speech when appropriate\n- Include complex structures with relative and conditional clauses")
+        st.markdown("- Passiv, indirekte Rede\n- Relativ- & Konditionalsätze")
 
 student_id = st.text_input("Enter your student code:")
 if not student_id:
-    st.warning("Please enter your student code.")
-    st.stop()
+    st.warning("Please enter your student code."); st.stop()
 if student_id not in student_codes:
-    st.error("❌ You are not authorized to use this app.")
-    st.stop()
+    st.error("❌ Unauthorized"); st.stop()
 
-subs = log_data.get(student_id, 0)
-max_subs = 40 if level == 'A1' else 45
-if subs >= max_subs:
-    st.warning(f"⚠️ You have reached the maximum of {max_subs} submissions.")
-    st.stop()
-if subs >= max_subs - 12:
-    st.info("⏳ You have used most of your submission chances. Review carefully!")
+subs = log_data.get(student_id,0)
+max_subs = 40 if level=="A1" else 45
+if subs>=max_subs:
+    st.warning(f"⚠️ You have reached {max_subs} submissions."); st.stop()
+if subs>=max_subs-12:
+    st.info("⏳ Few submissions left—be careful!")
 
 task_num = None
 task = None
-if level == "A1":
-    task_num = st.number_input(f"Choose a Schreiben task number (1 to {len(a1_tasks)})", 1, len(a1_tasks), 1)
-    try:
-        task = a1_tasks[int(task_num)]
-        st.markdown(f"### Aufgabe {task_num}: {task['task']}")
-        st.markdown("**Points:**")
-        for p in task['points']:
-            st.markdown(f"- {p}")
-    except KeyError:
-        st.error("Invalid task number.")
+if level=="A1":
+    task_num = st.number_input(f"Aufgabe (1–{len(a1_tasks)})",1,len(a1_tasks),1)
+    task = a1_tasks[task_num]
+    st.markdown(f"### Aufgabe {task_num}: {task['task']}")
+    for p in task["points"]:
+        st.markdown(f"- {p}")
 
-with st.form("feedback_form"):
-    student_text = st.text_area("✏️ Write your letter or essay below:", height=300)
-    submit = st.form_submit_button("✅ Submit for Feedback")
+with st.form("f"):
+    text = st.text_area("✏️ Your text:", height=300)
+    submit = st.form_submit_button("Submit")
 
-def score_text(student_text, level, gpt_results, adv):
-    words = re.findall(r"\w+", student_text.lower())
-    unique_ratio = len(set(words)) / len(words) if words else 0
-    sentences = re.split(r'[.!?]', student_text)
-    avg_words = len(words) / max(1, len([s for s in sentences if s.strip()]))
-    readability = "Easy" if avg_words <= 12 else "Medium" if avg_words <= 17 else "Hard"
-    content_score = 10
-    grammar_score = max(1, 5 - len(gpt_results))
-    vocab_score = min(5, int((len(set(words)) / len(words)) * 5)) if words else 1
-    if adv:
-        vocab_score = max(1, vocab_score - 1)
-    structure_score = 5
-    total = content_score + grammar_score + vocab_score + structure_score
-    return content_score, grammar_score, vocab_score, structure_score, total, unique_ratio, avg_words, readability
+def score_text(txt, lvl, gpt_res, adv):
+    ws = re.findall(r"\w+", txt.lower())
+    uniq = len(set(ws))/len(ws) if ws else 0
+    sents = re.split(r"[.!?]", txt)
+    avg = len(ws)/max(1,len([s for s in sents if s.strip()]))
+    read = "Easy" if avg<=12 else "Medium" if avg<=17 else "Hard"
+    content=10
+    grammar=max(1,5-len(gpt_res))
+    vocab=min(5,int((len(set(ws))/len(ws))*5)) if ws else 1
+    if adv: vocab=max(1,vocab-1)
+    struct=5
+    total=content+grammar+vocab+struct
+    return content,grammar,vocab,struct,total,uniq,avg,read
 
-def generate_feedback_text(level, task_type, task, content_score, grammar_score, vocab_score, structure_score, total, gpt_results, adv, used, student_text):
-    feedback_text = f"""Your Feedback – {task_type} ({level})
-Task: {task['task'] if task else ''}
-Scores:
-- Content: {content_score}/10
-- Grammar: {grammar_score}/5
-- Vocabulary: {vocab_score}/5
-- Structure: {structure_score}/5
-Total: {total}/25
-
-Grammar Suggestions:
-{chr(10).join(gpt_results) if gpt_results else 'No major grammar errors detected.'}
-
-Advanced Vocabulary:
-{', '.join(adv) if adv else 'None'}
-
-Connectors Used:
-{', '.join(used) if used else 'None'}
-
-Your Text:
-{student_text}
-"""
-    return feedback_text
+def generate_feedback_text(level, task_type, task, c, g, v, s, tot, gpt_res, adv, used, txt):
+    return (
+        f"Your Feedback – {task_type} ({level})\n"
+        f"Task: {task['task'] if task else ''}\n"
+        f"- Content: {c}/10\n- Grammar: {g}/5\n- Vocabulary: {v}/5\n- Structure: {s}/5\n"
+        f"Total: {tot}/25\n\n"
+        "Grammar Suggestions:\n" + ("\n".join(gpt_res) if gpt_res else "None") + "\n\n"
+        "Advanced Vocabulary:\n" + (", ".join(adv) if adv else "None") + "\n\n"
+        "Connectors Used:\n" + (", ".join(used) if used else "None") + "\n\n"
+        "Your Text:\n" + txt
+    )
 
 if submit:
-    with st.spinner("🔄 Processing your submission, please wait…"):
-        if not student_text.strip():
-            st.warning("Please enter your text before submitting.")
-            st.stop()
+    if not text.strip():
+        st.warning("Enter text"); st.stop()
+    with st.spinner("Processing…"):
+        gpt_res = grammar_check_with_gpt(text)
+        adv = detect_advanced_vocab(text, level) if level in ("A1","A2") else []
+        c,g,v,s,tot,uniq,avg,read = score_text(text, level, gpt_res, adv)
 
-        gpt_results = grammar_check_with_gpt(student_text)
-        adv = detect_advanced_vocab(student_text, level, approved_vocab) if level in ("A1", "A2") else []
-        content_score, grammar_score, vocab_score, structure_score, total, unique_ratio, avg_words, readability = score_text(student_text, level, gpt_results, adv)
-
-        # -- Connectors used --
-        conns = connectors_by_level.get(level, set())
-        used = [c for c in conns if c in student_text.lower()]
-
-        # -- Generate feedback text first --
-        feedback_text = generate_feedback_text(
-            level, task_type, task, content_score, grammar_score, vocab_score, structure_score,
-            total, gpt_results, adv, used, student_text
-        )
-
-        # -- Save all relevant submission data for future model training --
-        save_for_training(
-            student_id=student_id,
-            level=level,
-            task_type=task_type,
-            task_num=task_num,
-            student_text=student_text,
-            gpt_results=gpt_results,
-            feedback_text=feedback_text
-        )
-
-        # -- Update submission log --
-        log_data[student_id] = log_data.get(student_id, 0) + 1
-        with open(LOG_PATH, "w", encoding="utf-8", newline="") as f:
-            writer = csv.writer(f)
-            for k, v in log_data.items():
-                writer.writerow([k, v])
+        # update log & save training
+        log_data[student_id] = subs+1
+        with open(LOG_PATH,"w",newline="",encoding="utf-8") as f:
+            w=csv.writer(f)
+            for k,vv in log_data.items(): w.writerow([k,vv])
+        save_for_training(student_id, level, task_type, task_num, text, gpt_res, "")
 
         if adv:
             st.warning(f"⚠️ The following words may be too advanced: {', '.join(adv)}")
