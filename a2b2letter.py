@@ -10,9 +10,11 @@ from datetime import datetime
 st.set_page_config(page_title="German Letter & Essay Checker", layout="wide")
 st.title("📝 German Letter & Essay Checker – Learn Language Education Academy")
 
-VOCAB_PATH = "approved_vocab.csv"
+# --- File paths ---
 CONNECTOR_PATH = "approved_connectors.csv"
 LOG_PATH = "submission_log.csv"
+TRAINING_DATA_PATH = "essay_training_data.csv"
+STUDENT_CODES_PATH = "student_codes.csv"
 
 # --- API Key ---
 api_key = st.secrets.get("general", {}).get("OPENAI_API_KEY") or os.getenv("OPENAI_API_KEY")
@@ -24,129 +26,47 @@ client = openai.OpenAI(api_key=api_key)
 
 # --- Stopwords and function words ---
 german_stopwords = stop.stopwords("de")
-function_words = {w.lower() for w in {
-    "ich", "du", "er", "sie", "wir", "ihr", "mir", "mich",
-    "der", "die", "das", "ein", "eine",
-    "und", "oder", "aber", "nicht", "wie", "wann", "wo",
-    "sein", "haben", "können", "müssen", "wollen", "sollen",
-    "bitte", "viel", "gut", "sehr",
-    "wer", "was", "wann", "wo", "warum", "wie",
-    "order"
-}}
-advanced_suggestions = {
-    "rechnung": "zahlung",
-    "informationen": "angaben",
-    "deutschkurs": "kurs",
+function_words = {
+    w.lower() for w in {
+        "ich","du","er","sie","wir","ihr","mir","mich",
+        "der","die","das","ein","eine",
+        "und","oder","aber","nicht","wie","wann","wo",
+        "sein","haben","können","müssen","wollen","sollen",
+        "bitte","viel","gut","sehr",
+        "wer","was","wann","wo","warum","wie",
+        "order"
+    }
 }
 
-# --- Helper functions ---
-def load_vocab_from_csv():
-    vocab = {"A1": set(), "A2": set()}
-    if os.path.exists(VOCAB_PATH):
-        with open(VOCAB_PATH, newline='', encoding='utf-8') as f:
-            for row in csv.reader(f):
-                if len(row) >= 2 and row[0] in vocab:
-                    vocab[row[0]].add(row[1].strip().lower())
-    if not any(vocab.values()):
-        vocab["A1"].update(["bitte", "danke", "tschüss", "möchten", "schreiben", "bezahlen"])
-        vocab["A2"].update(["arbeiten", "lernen", "verstehen", "helfen"])
-    return vocab
-
-def save_vocab_to_csv(vocab):
-    with open(VOCAB_PATH, "w", encoding="utf-8", newline="") as f:
-        writer = csv.writer(f)
-        for level in ["A1", "A2"]:
-            for word in sorted(vocab[level]):
-                writer.writerow([level, word])
-
-def load_connectors_from_csv():
-    conns = {"A1": set(), "A2": set(), "B1": set(), "B2": set()}
-    if os.path.exists(CONNECTOR_PATH):
-        with open(CONNECTOR_PATH, newline='', encoding="utf-8") as f:
-            for row in csv.reader(f):
-                if len(row) >= 2 and row[0] in conns:
-                    items = [w.strip() for w in row[1].split(",") if w.strip()]
-                    conns[row[0]].update(items)
-    if not any(conns.values()):
-        conns = {
-            "A1": {"weil", "denn", "ich möchte wissen", "deshalb"},
-            "A2": {"deshalb", "deswegen", "darum", "trotzdem", "obwohl", "sobald", "außerdem", "zum Beispiel", "und", "aber", "oder", "erstens", "zweitens", "zum Schluss"},
-            "B1": {"jedoch", "allerdings", "hingegen", "trotzdem", "dennoch", "folglich", "daher", "demnach", "infolgedenden", "deshalb", "damit", "sofern", "falls", "währenddessen", "inzwischen", "mittlerweile", "anschließend", "schließlich", "beispielsweise", "zumal", "wohingegen", "erstens", "zweitens", "kurzum", "zusammenfassend", "einerseits", "andererseits"},
-            "B2": {"allerdings", "dennoch", "gleichwohl", "demzufolge", "mithin", "ergo", "sodass", "obgleich", "obschon", "wenngleich", "ungeachtet", "indessen", "nichtsdestotrotz", "einerseits", "andererseits", "zumal", "insofern", "insoweit", "demgemäß", "zusammenfassend", "abschließend", "letztendlich"}
-        }
-    return conns
-
-def save_connectors_to_csv(conns):
-    with open(CONNECTOR_PATH, "w", encoding="utf-8", newline="") as f:
-        writer = csv.writer(f)
-        for lvl in ["A1", "A2", "B1", "B2"]:
-            writer.writerow([lvl, ", ".join(sorted(conns[lvl]))])
-
-def load_student_codes():
-    codes = set()
-    if os.path.exists("student_codes.csv"):
-        with open("student_codes.csv", newline='', encoding="utf-8") as f:
-            reader = csv.reader(f)
-            headers = next(reader, None)
-            idx = headers.index('student_code') if headers and 'student_code' in headers else 0
-            for row in reader:
-                if len(row) > idx and row[idx].strip():
-                    codes.add(row[idx].strip())
-    return codes
-
-def load_submission_log():
-    data = {}
-    if os.path.exists(LOG_PATH):
-        with open(LOG_PATH, newline='', encoding="utf-8") as f:
-            for sid, count in csv.reader(f):
-                data[sid] = int(count)
-    return data
-
-def save_for_training(student_id, level, task_type, task_num, student_text, gpt_results, feedback_text):
-    grammar_feedback = "\n".join(gpt_results) if gpt_results else ""
-    row = {
-        "timestamp": datetime.now(),
-        "student_id": student_id,
-        "level": level,
-        "task_type": task_type,
-        "task_num": task_num,
-        "original_text": student_text,
-        "gpt_grammar_feedback": grammar_feedback,
-        "full_feedback": feedback_text
+# --- Approved vocabulary by level (hard-coded) ---
+approved_vocab = {
+    "A1": {
+        "Anfrage","Anmelden","Terminen","Preisen","Kreditkarte","absagen",
+        "anfangen","vereinbaren","übernachten","Rechnung","Informationen",
+        "Anruf","antworten","Gebühr","buchen","eintragen","mitnehmen",
+        "Unterschrift","Untersuchung","Unfall","abholen","abgeben",
+        "mitteilen","erreichen","eröffnen","reservieren","verschieben",
+        "freundlichen","besuchen","Abendessen","Restaurant",
+        "bitte","danke","Entschuldigung","Hallo","Tschüss",
+        "Name","Adresse","Telefonnummer","Straße","Postleitzahl",
+        "Bahn","Bus","Auto","Fahrrad",
+        "Apotheke","Supermarkt","Bäckerei",
+        "heute","morgen","jetzt","später",
+        "schreiben","lesen","sehen","hören"
+    },
+    "A2": {
+        "verstehen","arbeiten","lernen","besuchen","fahren","lesen",
+        "helfen","sprechen","finden","tragen","essen","geben",
+        "wohnen","spielen","anmelden","krankenhaus","trainingszeiten",
+        "kosten","Termin","Ausweis","Führerschein","Öffnungszeiten",
+        "verabreden","verschieben","absagen","einladen","Reparatur",
+        "Schlüssel","Nachricht","E-Mail","Reise","Urlaub","Hotel",
+        "Bahnhof","Flughafen","schmecken","bestellen","bezahlen",
+        "trinken","kochen","Kollege","Chef","Arbeit","Stelle","Firma"
     }
-    file = "essay_training_data.csv"
-    df = pd.DataFrame([row])
-    if not os.path.exists(file):
-        df.to_csv(file, mode="w", index=False)
-    else:
-        df.to_csv(file, mode="a", header=False, index=False)
+}
 
-def download_training_data():
-    if os.path.exists("essay_training_data.csv"):
-        with open("essay_training_data.csv", "rb") as f:
-            st.download_button(
-                "⬇️ Download All Submissions",
-                data=f,
-                file_name="essay_training_data.csv",
-                mime="text/csv"
-            )
-    else:
-        st.info("No training data collected yet.")
-
-# --- Advanced vocab detection ---
-def detect_advanced_vocab(text: str, level: str, approved_vocab) -> list[str]:
-    text_norm = text.replace('\u2010', '-').replace('\u2011', '-')
-    tokens = re.findall(r"[A-Za-zÄÖÜäöüß\-]+", text_norm)
-    allowed = approved_vocab.get(level, set()) | german_stopwords | function_words
-    flags = []
-    for w in set(tokens):
-        lw = w.lower().strip('-')
-        if len(lw) <= 2 or lw in allowed or w.isupper():
-            continue
-        flags.append(w)
-    return sorted(flags)
-
-# --- GPT grammar check ---
+# --- GPT‐based grammar check ---
 def grammar_check_with_gpt(text: str) -> list[str]:
     prompt = (
         "You are a German language tutor. "
@@ -162,58 +82,287 @@ def grammar_check_with_gpt(text: str) -> list[str]:
     )
     return response.choices[0].message.content.strip().splitlines()
 
-# --- Annotation function ---
+# --- Detect advanced vocabulary (A1/A2 only) ---
+def detect_advanced_vocab(text: str, level: str) -> list[str]:
+    """
+    Flags any word not in approved_vocab[level].
+    """
+    tokens = re.findall(r"\w+", text)
+    allowed = approved_vocab.get(level, set()) | german_stopwords | function_words
+    return sorted(w for w in set(tokens) if w not in allowed)
+
+# --- Helpers for connectors, students, logs, training data ---
+def load_connectors_from_csv():
+    conns = {"A1": set(), "A2": set(), "B1": set(), "B2": set()}
+    if os.path.exists(CONNECTOR_PATH):
+        with open(CONNECTOR_PATH, newline='', encoding="utf-8") as f:
+            for lvl, conns_str in csv.reader(f):
+                if lvl in conns:
+                    conns[lvl] = {c.strip() for c in conns_str.split(",") if c.strip()}
+    if not any(conns.values()):
+        conns = {
+            "A1": {"weil","denn","ich möchte wissen","deshalb"},
+            "A2": {"deshalb","deswegen","darum","trotzdem","obwohl","sobald","außerdem","zum Beispiel","und","aber","oder","erstens","zweitens","zum Schluss"},
+            "B1": {"jedoch","allerdings","hingegen","trotzdem","dennoch","folglich","daher","demnach","deshalb","damit","sofern","falls","währenddessen","inzwischen","mittlerweile","anschließend","schließlich","beispielsweise","zumal","wohingegen","erstens","zweitens","kurzum","zusammenfassend","einerseits","andererseits"},
+            "B2": {"allerdings","dennoch","gleichwohl","demzufolge","mithin","ergo","sodass","obgleich","obschon","wenngleich","ungeachtet","indessen","nichtsdestotrotz","einerseits","andererseits","zumal","insofern","insoweit","demgemäß","zusammenfassend","abschließend","letztendlich"}
+        }
+    return conns
+
+def save_connectors_to_csv(conns):
+    with open(CONNECTOR_PATH, "w", encoding="utf-8", newline="") as f:
+        writer = csv.writer(f)
+        for lvl in ["A1","A2","B1","B2"]:
+            writer.writerow([lvl, ", ".join(sorted(conns[lvl]))])
+
+def load_student_codes():
+    codes = set()
+    if os.path.exists(STUDENT_CODES_PATH):
+        with open(STUDENT_CODES_PATH, newline='', encoding="utf-8") as f:
+            reader = csv.reader(f)
+            headers = next(reader, None)
+            idx = headers.index("student_code") if headers and "student_code" in headers else 0
+            for row in reader:
+                if len(row) > idx and row[idx].strip():
+                    codes.add(row[idx].strip())
+    return codes
+
+def load_submission_log():
+    data = {}
+    if os.path.exists(LOG_PATH):
+        with open(LOG_PATH, newline='', encoding="utf-8") as f:
+            for sid, count in csv.reader(f):
+                data[sid] = int(count)
+    return data
+
+def save_for_training(student_id, level, task_type, task_num, student_text, gpt_results, feedback_text):
+    row = {
+        "timestamp": datetime.now(),
+        "student_id": student_id,
+        "level": level,
+        "task_type": task_type,
+        "task_num": task_num,
+        "original_text": student_text,
+        "gpt_grammar_feedback": "\n".join(gpt_results),
+        "full_feedback": feedback_text
+    }
+    df = pd.DataFrame([row])
+    if not os.path.exists(TRAINING_DATA_PATH):
+        df.to_csv(TRAINING_DATA_PATH, index=False)
+    else:
+        df.to_csv(TRAINING_DATA_PATH, mode="a", header=False, index=False)
+
+def download_training_data():
+    if os.path.exists(TRAINING_DATA_PATH):
+        with open(TRAINING_DATA_PATH, "rb") as f:
+            st.download_button(
+                "⬇️ Download All Submissions",
+                data=f,
+                file_name="essay_training_data.csv",
+                mime="text/csv"
+            )
+    else:
+        st.info("No training data collected yet.")
+
+# --- Annotation helper ---
 def annotate_text(student_text, gpt_results, adv, level):
     ann = student_text
-    colors = {'Grammar': '#e15759', 'Advanced': '#f1c232'}
-    # Highlight grammar errors
-    if gpt_results:
-        for line in gpt_results:
-            if "⇒" in line:
-                err = line.split("⇒")[0].strip(" `")
-                if len(err) > 1:
-                    pattern = r'(?i)\b' + re.escape(err) + r'\b'
-                    def repl_grammar(m):
-                        if "</span>" in m.group(0):
-                            return m.group(0)
-                        return f"<span style='background-color:{colors['Grammar']}; color:#fff'>{m.group(0)}</span>"
-                    ann = re.sub(pattern, repl_grammar, ann)
-    # Highlight advanced vocabulary (A1/A2)
-    if level in ["A1", "A2"] and adv:
-        for word in adv:
-            pattern = rf'(?i)\b({re.escape(word)})\b'
-            def repl_advanced(m):
-                if "</span>" in m.group(0):
-                    return m.group(0)
-                return (f"<span title='Too advanced for {level}' "
-                        f"style='background-color:{colors['Advanced']}; color:#000'>{m.group(1)}</span>")
-            ann = re.sub(pattern, repl_advanced, ann)
-    return ann.replace("\n", "  \n")
+    colors = {"Grammar":"#e15759","Advanced":"#f1c232"}
+    # Highlight grammar
+    for line in gpt_results:
+        if "⇒" in line:
+            err = line.split("⇒")[0].strip(" `")
+            pattern = r"(?i)\b" + re.escape(err) + r"\b"
+            ann = re.sub(pattern,
+                         lambda m: f"<span style='background-color:{colors['Grammar']}; color:#fff'>{m.group(0)}</span>",
+                         ann)
+    # Highlight advanced vocab
+    if level in ("A1","A2"):
+        for w in adv:
+            pattern = rf"(?i)\b({re.escape(w)})\b"
+            ann = re.sub(pattern,
+                         lambda m: f"<span title='Too advanced for {level}' style='background-color:{colors['Advanced']}; color:#000'>{m.group(1)}</span>",
+                         ann)
+    return ann.replace("\n","  \n")
+
 
 # --- A1 tasks (static) ---
 a1_tasks = {
-    1: {"task": "E-Mail an Ihren Arzt: Termin absagen.", "points": ["Warum schreiben Sie?", "Grund für die Absage.", "Fragen Sie nach neuem Termin."]},
-    2: {"task": "Einladung an Freund: Feier neuen Jobs.", "points": ["Warum?", "Wann?", "Wer soll was mitbringen?"]},
-    3: {"task": "E-Mail an Freund: Besuch ankündigen.", "points": ["Warum?", "Wann?", "Was zusammen machen?"]},
-    4: {"task": "E-Mail an Schule: Deutschkurs anfragen.", "points": ["Warum?", "Was möchten Sie wissen?", "Wie antworten sie?"]},
-    5: {"task": "E-Mail an Vermieterin: Heizung defekt.", "points": ["Warum?", "Seit wann?", "Was soll sie tun?"]},
-    6: {"task": "E-Mail an Freund: neue Wohnung.", "points": ["Warum?", "Wo ist sie?", "Was gefällt Ihnen?"]},
-    7: {"task": "E-Mail an Freundin: neue Arbeitsstelle.", "points": ["Warum?", "Wo?", "Was machen Sie?"]},
-    8: {"task": "E-Mail an Lehrer: Kurs nicht teilnehmen.", "points": ["Warum?", "Warum kommen Sie nicht?", "Was möchten Sie?"]},
-    9: {"task": "E-Mail an Bibliothek: Buch verloren.", "points": ["Warum?", "Welches Buch?", "Was möchten Sie?"]},
-    10: {"task": "E-Mail an Freundin: Urlaub planen.", "points": ["Wohin?", "Was machen?", "Wann?"]},
-    11: {"task": "E-Mail an Schule: Termin ändern.", "points": ["Welcher Termin?", "Wann haben Sie Zeit?", "Warum?"]},
-    12: {"task": "E-Mail an Bruder: Party organisieren.", "points": ["Wann?", "Was soll er mitbringen?", "Warum?"]},
-    13: {"task": "E-Mail an Freundin: Sie sind krank.", "points": ["Warum?", "Was machen Sie nicht?", "Was sollen Sie tun?"]},
-    14: {"task": "E-Mail an Nachbarn: Urlaub.", "points": ["Wie lange?", "Was sollen Nachbarn?", "Warum informieren?"]},
-    15: {"task": "Deutschlehrerin: Prüfung anmelden.", "points": ["Welche Prüfung?", "Warum?", "Wann?"]},
-    16: {"task": "Freundin: neuen Computer kaufen.", "points": ["Warum?", "Wo gekauft?", "Was gefällt?"]},
-    17: {"task": "Freundin: zusammen Sport.", "points": ["Welchen Sport?", "Wann?", "Warum?"]},
-    18: {"task": "Freund: Hilfe Umzug.", "points": ["Wann?", "Was soll er tun?", "Warum?"]},
-    19: {"task": "Freundin: Fest organisieren.", "points": ["Wo?", "Was machen?", "Warum?"]},
-    20: {"task": "Freundin: zusammen kochen.", "points": ["Was wollen Sie kochen?", "Wann?", "Warum?"]},
-    21: {"task": "Freund: neuer Job.", "points": ["Wo?", "Was machen?", "Warum?"]},
-    22: {"task": "E-Mail an Schule: Deutschkurs besuchen.", "points": ["Wann?", "Warum?", "Was möchten Sie?"]}
+    1: {
+        "task": "Schreiben Sie eine E-Mail an Ihren Arzt und sagen Sie Ihren Termin ab.",
+        "points": [
+            "Warum schreiben Sie?",
+            "Sagen Sie: den Grund für die Absage.",
+            "Fragen Sie: nach einem neuen Termin."
+        ]
+    },
+    2: {
+        "task": "Schreiben Sie eine Einladung an Ihren Freund zur Feier Ihres neuen Jobs.",
+        "points": [
+            "Warum schreiben Sie?",
+            "Wann ist die Feier?",
+            "Wer soll was mitbringen?"
+        ]
+    },
+    3: {
+        "task": "Schreiben Sie eine E-Mail an einen Freund und teilen Sie ihm mit, dass Sie ihn besuchen möchten.",
+        "points": [
+            "Warum schreiben Sie?",
+            "Wann besuchen Sie ihn?",
+            "Was möchten Sie zusammen machen?"
+        ]
+    },
+    4: {
+        "task": "Schreiben Sie eine E-Mail an Ihre Schule und fragen Sie nach einem Deutschkurs.",
+        "points": [
+            "Warum schreiben Sie?",
+            "Was möchten Sie wissen?",
+            "Wie kann die Schule antworten?"
+        ]
+    },
+    5: {
+        "task": "Schreiben Sie eine E-Mail an Ihre Vermieterin. Ihre Heizung ist kaputt.",
+        "points": [
+            "Warum schreiben Sie?",
+            "Seit wann ist die Heizung kaputt?",
+            "Was soll die Vermieterin tun?"
+        ]
+    },
+    6: {
+        "task": "Schreiben Sie eine E-Mail an Ihren Freund. Sie haben eine neue Wohnung.",
+        "points": [
+            "Warum schreiben Sie?",
+            "Wo ist die Wohnung?",
+            "Was gefällt Ihnen?"
+        ]
+    },
+    7: {
+        "task": "Schreiben Sie eine E-Mail an Ihre Freundin. Sie haben eine neue Arbeitsstelle.",
+        "points": [
+            "Warum schreiben Sie?",
+            "Wo arbeiten Sie jetzt?",
+            "Was machen Sie?"
+        ]
+    },
+    8: {
+        "task": "Schreiben Sie eine E-Mail an Ihren Lehrer. Sie können am Kurs nicht teilnehmen.",
+        "points": [
+            "Warum schreiben Sie?",
+            "Warum kommen Sie nicht?",
+            "Was möchten Sie?"
+        ]
+    },
+    9: {
+        "task": "Schreiben Sie eine E-Mail an die Bibliothek. Sie haben ein Buch verloren.",
+        "points": [
+            "Warum schreiben Sie?",
+            "Welches Buch haben Sie verloren?",
+            "Was möchten Sie wissen?"
+        ]
+    },
+    10: {
+        "task": "Schreiben Sie eine E-Mail an Ihre Freundin. Sie möchten mit ihr in den Urlaub fahren.",
+        "points": [
+            "Warum schreiben Sie?",
+            "Wohin möchten Sie fahren?",
+            "Was möchten Sie dort machen?"
+        ]
+    },
+    11: {
+        "task": "Schreiben Sie eine E-Mail an Ihre Schule. Sie möchten einen Termin ändern.",
+        "points": [
+            "Warum schreiben Sie?",
+            "Welcher Termin ist es?",
+            "Wann haben Sie Zeit?"
+        ]
+    },
+    12: {
+        "task": "Schreiben Sie eine E-Mail an Ihren Bruder. Sie machen eine Party.",
+        "points": [
+            "Warum schreiben Sie?",
+            "Wann ist die Party?",
+            "Was soll Ihr Bruder mitbringen?"
+        ]
+    },
+    13: {
+        "task": "Schreiben Sie eine E-Mail an Ihre Freundin. Sie sind krank.",
+        "points": [
+            "Warum schreiben Sie?",
+            "Was machen Sie heute nicht?",
+            "Was sollen Sie tun?"
+        ]
+    },
+    14: {
+        "task": "Schreiben Sie eine E-Mail an Ihre Nachbarn. Sie machen Urlaub.",
+        "points": [
+            "Warum schreiben Sie?",
+            "Wie lange sind Sie weg?",
+            "Was sollen die Nachbarn tun?"
+        ]
+    },
+    15: {
+        "task": "Schreiben Sie eine E-Mail an Ihre Deutschlehrerin. Sie möchten eine Prüfung machen.",
+        "points": [
+            "Warum schreiben Sie?",
+            "Welche Prüfung möchten Sie machen?",
+            "Wann möchten Sie die Prüfung machen?"
+        ]
+    },
+    16: {
+        "task": "Schreiben Sie eine E-Mail an Ihre Freundin. Sie haben einen neuen Computer gekauft.",
+        "points": [
+            "Warum schreiben Sie?",
+            "Wo haben Sie den Computer gekauft?",
+            "Was gefällt Ihnen besonders?"
+        ]
+    },
+    17: {
+        "task": "Schreiben Sie eine E-Mail an Ihre Freundin. Sie möchten zusammen Sport machen.",
+        "points": [
+            "Warum schreiben Sie?",
+            "Welchen Sport möchten Sie machen?",
+            "Wann können Sie?"
+        ]
+    },
+    18: {
+        "task": "Schreiben Sie eine E-Mail an Ihren Freund. Sie brauchen Hilfe beim Umzug.",
+        "points": [
+            "Warum schreiben Sie?",
+            "Wann ist der Umzug?",
+            "Was soll Ihr Freund machen?"
+        ]
+    },
+    19: {
+        "task": "Schreiben Sie eine E-Mail an Ihre Freundin. Sie möchten ein Fest organisieren.",
+        "points": [
+            "Warum schreiben Sie?",
+            "Wo soll das Fest sein?",
+            "Was möchten Sie machen?"
+        ]
+    },
+    20: {
+        "task": "Schreiben Sie eine E-Mail an Ihre Freundin. Sie möchten zusammen kochen.",
+        "points": [
+            "Warum schreiben Sie?",
+            "Was möchten Sie kochen?",
+            "Wann möchten Sie kochen?"
+        ]
+    },
+    21: {
+        "task": "Schreiben Sie eine E-Mail an Ihren Freund. Sie haben einen neuen Job.",
+        "points": [
+            "Warum schreiben Sie?",
+            "Wo arbeiten Sie jetzt?",
+            "Was machen Sie?"
+        ]
+    },
+    22: {
+        "task": "Schreiben Sie eine E-Mail an Ihre Schule. Sie möchten einen Deutschkurs besuchen.",
+        "points": [
+            "Warum schreiben Sie?",
+            "Wann möchten Sie den Kurs besuchen?",
+            "Was möchten Sie noch wissen?"
+        ]
+    }
 }
 
 # --- Teacher Settings ---
