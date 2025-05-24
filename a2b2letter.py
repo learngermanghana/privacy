@@ -7,6 +7,13 @@ import openai
 import stopwordsiso as stop
 from datetime import datetime
 
+
+
+TRAINING_DATA_PATH = "essay_training_data.csv"
+
+st.set_page_config(page_title="German Letter & Essay Checker", layout="wide")
+st.title("📝 German Letter & Essay Checker – Learn Language Education Academy")
+
 st.markdown("""
     <style>
     #MainMenu {visibility: hidden;}
@@ -14,11 +21,6 @@ st.markdown("""
     header {visibility: hidden;}
     </style>
     """, unsafe_allow_html=True)
-
-TRAINING_DATA_PATH = "essay_training_data.csv"
-
-st.set_page_config(page_title="German Letter & Essay Checker", layout="wide")
-st.title("📝 German Letter & Essay Checker – Learn Language Education Academy")
 
 VOCAB_PATH = "approved_vocab.csv"
 CONNECTOR_PATH = "approved_connectors.csv"
