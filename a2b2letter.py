@@ -7,6 +7,14 @@ import openai
 import stopwordsiso as stop
 from datetime import datetime
 
+st.markdown("""
+    <style>
+    #MainMenu {visibility: hidden;}
+    footer {visibility: hidden;}
+    header {visibility: hidden;}
+    </style>
+    """, unsafe_allow_html=True)
+
 TRAINING_DATA_PATH = "essay_training_data.csv"
 
 st.set_page_config(page_title="German Letter & Essay Checker", layout="wide")
