@@ -103,6 +103,36 @@ def load_submission_log():
                 data[sid] = int(count)
     return data
 
+# --- Training Data Helpers ---
+def save_for_training(student_id, level, task_type, task_num, student_text, gpt_results, feedback_text):
+    row = {
+        "timestamp": datetime.now(),
+        "student_id": student_id,
+        "level": level,
+        "task_type": task_type,
+        "task_num": task_num,
+        "original_text": student_text,
+        "gpt_grammar_feedback": "\n".join(gpt_results),
+        "full_feedback": feedback_text
+    }
+    df = pd.DataFrame([row])
+    if not os.path.exists(TRAINING_DATA_PATH):
+        df.to_csv(TRAINING_DATA_PATH, index=False)
+    else:
+        df.to_csv(TRAINING_DATA_PATH, mode='a', header=False, index=False)
+
+def download_training_data():
+    if os.path.exists(TRAINING_DATA_PATH):
+        with open(TRAINING_DATA_PATH, 'rb') as f:
+            st.download_button("⬇️ Download All Submissions", data=f, file_name="essay_training_data.csv", mime="text/csv")
+    else:
+        st.info("No training data collected yet.")
+
+def render_collected_essays_for_training():
+    """Display the AI training data download section in the dashboard."""
+    st.subheader("Collected Essays for AI Training")
+    download_training_data()
+
 # --- Advanced vocab detection ---
 def detect_advanced_vocab(text: str, level: str, approved_vocab) -> list[str]:
     text_norm = text.replace('\u2010','-').replace('\u2011','-')
