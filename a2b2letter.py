@@ -320,9 +320,7 @@ def download_training_data():
     else:
         st.info("No training data collected yet.")
 
-# Teacher Dashboard
-if teacher_mode and page == "Teacher Dashboard":
-    st.header("📋 Teacher Dashboard")
+# --- Teacher Dashboard ---
 if teacher_mode and page == "Teacher Dashboard":
     st.header("📋 Teacher Dashboard")
 
@@ -429,7 +427,7 @@ if st.button("✅ Submit for Feedback"):
         # 1. Grammar check
         gpt_results = grammar_check_with_gpt(student_text)
 
-        # 2. Long phrase/advanced vocab detection
+        # 2. Long phrase detection
         adv = detect_long_phrases(student_text, level)
 
         # 3. Connectors used
@@ -450,7 +448,7 @@ if st.button("✅ Submit for Feedback"):
             gpt_results, adv, used_connectors, student_text
         )
 
-        # 6. Save for training and update log
+        # 6. Save for training & update log
         save_for_training(
             student_id=student_id,
             level=level,
@@ -488,7 +486,7 @@ if st.button("✅ Submit for Feedback"):
     hints = sorted(connectors_by_level.get(level, []))[:4]
     st.info(f"📝 Try connectors like: {', '.join(hints)}…")
 
-    # Annotated text
+    # Annotated Text
     ann = annotate_text(student_text, gpt_results, adv, connectors_by_level, level)
     st.markdown("**Annotated Text:**", unsafe_allow_html=True)
     st.markdown(ann, unsafe_allow_html=True)
@@ -532,7 +530,4 @@ if st.button("✅ Submit for Feedback"):
         st.markdown("- 🔴 Repeated words: " + ", ".join(sorted(set(repeats))))
 
     # Download feedback
-    st.download_button(
-        "💾 Download feedback", data=feedback_text,
-        file_name="feedback.txt"
-    )
+    st.download_button("💾 Download feedback", data=feedback_text, file_name="feedback.txt")
