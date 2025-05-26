@@ -224,8 +224,10 @@ def score_text(student_text, level, gpt_results, adv):
     return (content_score, grammar_score, vocab_score,
             structure_score, total, unique_ratio, avg_words, readability)
 
-def generate_feedback_text(level, task_type, task, content_score, grammar_score, vocab_score,
-                          structure_score, total, gpt_results, long_phrases, student_text):
+def generate_feedback_text(level, task_type, task,
+                          content_score, grammar_score, vocab_score,
+                          structure_score, total,
+                          gpt_results, long_phrases, used_connectors, student_text):
     return f"""Your Feedback – {task_type} ({level})
 Task: {task['task'] if task else ''}
 Scores:
@@ -240,6 +242,9 @@ Grammar Suggestions:
 
 Long Phrases (flagged as too long):
 {', '.join(long_phrases) if long_phrases else 'None'}
+
+Connectors Used:
+{', '.join(used_connectors) if used_connectors else 'None'}
 
 Your Text:
 {student_text}
