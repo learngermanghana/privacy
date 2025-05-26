@@ -491,20 +491,31 @@ task_type = st.selectbox("Select task type", tasks)
 # --- STUDENT VIEW ---
 # Always load latest data
 approved_vocab      = load_vocab_from_csv()
-student_codes       = load_student_codes()        # now works without NameError
+student_codes       = load_student_codes()
 log_data            = load_submission_log()
 connectors_by_level = load_connectors_from_csv()
 
 # Level & Task Type selection
-level = st.selectbox("Select your level", ["A1","A2","B1","B2"])
-tasks = ["Formal Letter","Informal Letter"]
-if level in ("B1","B2"):
+level = st.selectbox(
+    "Select your level",
+    ["A1", "A2", "B1", "B2"],
+    key="student_level_select"
+)
+tasks = ["Formal Letter", "Informal Letter"]
+if level in ("B1", "B2"):
     tasks.append("Opinion Essay")
-task_type = st.selectbox("Select task type", tasks)
+task_type = st.selectbox(
+    "Select task type",
+    tasks,
+    key="student_task_type_select"
+)
 
 # Writing Tips
 st.markdown("### ✍️ Structure & Tips")
-with st.expander("✍️ Writing Tips and Usage Advice"):
+with st.expander(
+    "✍️ Writing Tips and Usage Advice",
+    key="writing_tips_expander"
+):
     if level == "A1":
         st.markdown(
             "- Use simple present tense (ich bin, ich habe, ich wohne...)  \n"
@@ -533,7 +544,10 @@ with st.expander("✍️ Writing Tips and Usage Advice"):
         )
 
 # Student authentication & submission limit
-student_id = st.text_input("Enter your student code:")
+student_id = st.text_input(
+    "Enter your student code:",
+    key="student_id_input"
+)
 if not student_id:
     st.warning("Please enter your student code.")
     st.stop()
@@ -553,8 +567,11 @@ if subs >= max_subs - 12:
 task_num = None
 task     = None
 if level == "A1":
-    task_num = st.number_input(f"Choose a Schreiben task number (1–{len(a1_tasks)})",
-                               1, len(a1_tasks), 1)
+    task_num = st.number_input(
+        f"Choose a Schreiben task number (1–{len(a1_tasks)})",
+        1, len(a1_tasks), 1,
+        key="task_num_input"
+    )
     task = a1_tasks.get(task_num)
     st.markdown(f"### Aufgabe {task_num}: {task['task']}")
     st.markdown("**Points:**")
@@ -562,11 +579,17 @@ if level == "A1":
         st.markdown(f"- {p}")
 
 # Submission form
-with st.form("feedback_form"):
-    student_text = st.text_area("✏️ Write your letter or essay below:", height=300)
-    submit       = st.form_submit_button("✅ Submit for Feedback")
+with st.form("feedback_form", key="feedback_form_key"):
+    student_text = st.text_area(
+        "✏️ Write your letter or essay below:",
+        height=300,
+        key="student_text_area"
+    )
+    submit = st.form_submit_button(
+        "✅ Submit for Feedback",
+        key="submit_button"
+    )
 
-# On form submit
 if submit:
     with st.spinner("🔄 Processing your submission…"):
         if not student_text.strip():
@@ -617,10 +640,10 @@ if submit:
         st.warning(f"⚠️ Too-advanced words: {', '.join(adv)}")
 
     st.markdown(f"🧮 Readability: {readability} ({avg_words:.1f} w/s)")
-    st.metric("Content",    f"{content_score}/10")
-    st.metric("Grammar",    f"{grammar_score}/5")
-    st.metric("Vocabulary", f"{vocab_score}/5")
-    st.metric("Structure",  f"{structure_score}/5")
+    st.metric("Content",    f"{content_score}/10", key="metric_content")
+    st.metric("Grammar",    f"{grammar_score}/5",  key="metric_grammar")
+    st.metric("Vocabulary", f"{vocab_score}/5",    key="metric_vocab")
+    st.metric("Structure",  f"{structure_score}/5", key="metric_structure")
     st.markdown(f"**Total: {total}/25**")
 
     # Explain scores
@@ -633,8 +656,8 @@ if submit:
     # Grammar suggestions list
     if gpt_results:
         st.markdown("**Grammar Suggestions:**")
-        for line in gpt_results:
-            st.markdown(f"- {line}")
+        for i, line in enumerate(gpt_results):
+            st.markdown(f"{i+1}. {line}", unsafe_allow_html=False)
 
     # Connector hints
     hints = sorted(connectors_by_level.get(level, []))[:4]
@@ -715,5 +738,7 @@ if submit:
     st.download_button(
         "💾 Download feedback",
         data=feedback_text,
-        file_name="feedback.txt"
+        file_name="feedback.txt",
+        key="download_feedback"
     )
+
