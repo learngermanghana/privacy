@@ -724,11 +724,13 @@ if submit:
 
     # 6. Noun capitalization issues (orange)
     noun_issues = re.findall(
-        r"(?<=(?: der| die| das| ein| eine| mein| dein)\s)([a-zäöüß]+)\b",
-        student_text
+        r"\b(?:der|die|das|ein|eine|mein|dein)\s+([a-zäöüß]+)\b",
+        student_text,
+        flags=re.I
     )
     if noun_issues:
         st.markdown("- 🟠 **Noun capitalization missing**: " + ", ".join(noun_issues))
+
 
     # 7. Punctuation issues (red)
     double_spaces = re.findall(r" {2,}", student_text)
