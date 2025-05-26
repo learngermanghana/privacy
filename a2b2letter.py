@@ -334,7 +334,8 @@ if teacher_mode and page == "Teacher Dashboard":
         current = ", ".join(sorted(connectors.get(lvl, set())))
         new_conns = st.text_area(f"{lvl} Connectors (comma-separated):", current, key=f"conn_{lvl}")
         if st.button(f"Update {lvl} Connectors", key=f"btn_conn_{lvl}"):
-            items = {c.strip() for c in new_con
+            items = {c.strip() for c in new_conns.split(",") if c.strip()}
+            
 # --- Teacher Settings ---
 st.sidebar.header("🔧 Teacher Settings")
 teacher_password = st.sidebar.text_input(
