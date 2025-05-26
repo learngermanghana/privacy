@@ -476,6 +476,21 @@ Connectors Used:
 Your Text:
 {student_text}
 """
+# --- Submission Log Helpers ---
+def load_submission_log():
+    data = {}
+    if os.path.exists(LOG_PATH):
+        with open(LOG_PATH, newline='', encoding='utf-8') as f:
+            for sid, count in csv.reader(f):
+                data[sid] = int(count)
+    return data
+
+def save_submission_log(log: dict):
+    """Persist the submission counts back to CSV."""
+    with open(LOG_PATH, "w", encoding="utf-8", newline="") as f:
+        writer = csv.writer(f)
+        for sid, count in log.items():
+            writer.writerow([sid, count])
 
 # --- STUDENT VIEW ---
 approved_vocab      = load_vocab_from_csv()
