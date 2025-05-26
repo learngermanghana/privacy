@@ -286,7 +286,7 @@ a1_tasks = {
          "points": ["Warum schreiben Sie?", "Wann möchten Sie den Kurs besuchen?", "Was möchten Sie noch wissen?"]}
 }
 
-# === Teacher Settings ===
+# --- Teacher Settings ---
 st.sidebar.header("🔧 Teacher Settings")
 teacher_password = st.sidebar.text_input("🔒 Enter teacher password", type="password")
 teacher_mode = (teacher_password == "Felix029")
@@ -307,68 +307,8 @@ def download_training_data():
     else:
         st.info("No training data collected yet.")
 
-def render_collected_essays_for_training():
-    st.subheader("📊 Collected Essays for AI Training")
-    download_training_data()
-
-# === Teacher Dashboard ===
 if teacher_mode and page == "Teacher Dashboard":
     st.header("📋 Teacher Dashboard")
-
-    # ---- VOCABULARY EDITOR ----
-    st.subheader("Edit Approved Vocabulary (A1/A2)")
-    vocab = load_vocab_from_csv()
-    for lvl in ["A1", "A2"]:
-        current = ", ".join(sorted(vocab.get(lvl, set())))
-        new_vocab = st.text_area(f"{lvl} Vocabulary (comma-separated):", current, key=f"vocab_{lvl}")
-        if st.button(f"Update {lvl} Vocab", key=f"btn_vocab_{lvl}"):
-            words = {w.strip().lower() for w in new_vocab.split(",") if w.strip()}
-            vocab[lvl] = words
-            save_vocab_to_csv(vocab)
-            st.success(f"✅ {lvl} vocabulary updated.")
-
-    # ---- CONNECTORS EDITOR ----
-    st.subheader("Edit Approved Connectors (A1-B2)")
-    connectors = load_connectors_from_csv()
-    for lvl in ["A1", "A2", "B1", "B2"]:
-        current = ", ".join(sorted(connectors.get(lvl, set())))
-        new_conns = st.text_area(f"{lvl} Connectors (comma-separated):", current, key=f"conn_{lvl}")
-        if st.button(f"Update {lvl} Connectors", key=f"btn_conn_{lvl}"):
-            items = {c.strip() for c in new_conns.split(",") if c.strip()}
-            
-# --- Teacher Settings ---
-st.sidebar.header("🔧 Teacher Settings")
-teacher_password = st.sidebar.text_input(
-    "🔒 Enter teacher password",
-    type="password",
-    key="admin123"  
-)
-teacher_mode = (teacher_password == "Felix029")
-if teacher_mode:
-    page = st.sidebar.radio(
-        "Go to:",
-        ["Student View", "Teacher Dashboard"],
-        key="Moxflex029"     
-    )
-else:
-    page = "Student View"
-
-def download_training_data():
-    """Offer the training data CSV as a download in the dashboard."""
-    if os.path.exists(TRAINING_DATA_PATH) and os.stat(TRAINING_DATA_PATH).st_size > 0:
-        with open(TRAINING_DATA_PATH, 'rb') as f:
-            st.download_button(
-                "⬇️ Download All Submissions",
-                data=f,
-                file_name="essay_training_data.csv",
-                mime="text/csv"
-            )
-    else:
-        st.info("No training data collected yet.")
-
-if teacher_mode and page == "Teacher Dashboard":
-    st.header("📋 Teacher Dashboard")
-
     with st.expander("📝 Edit Approved Vocabulary (A1/A2)"):
         vocab = load_vocab_from_csv()
         for lvl in ["A1", "A2"]:
@@ -429,88 +369,115 @@ if teacher_mode and page == "Teacher Dashboard":
 
     st.stop()
 
-# --- Scoring Helper ---
-def score_text(student_text, level, gpt_results, adv):
-    words = re.findall(r"\w+", student_text.lower())
-    unique_ratio = len(set(words)) / len(words) if words else 0
-    sentences = re.split(r"[.!?]", student_text)
-    avg_words = len(words) / max(1, len([s for s in sentences if s.strip()]))
-    readability = "Easy" if avg_words <= 12 else "Medium" if avg_words <= 17 else "Hard"
-    content_score   = 10
-    grammar_score   = max(1, 5 - len(gpt_results))
-    vocab_score     = min(5, int((len(set(words)) / len(words)) * 5))
-    if adv:
-        vocab_score = max(1, vocab_score - 1)
-    structure_score = 5
-    total           = content_score + grammar_score + vocab_score + structure_score
-    return (content_score, grammar_score, vocab_score,
-            structure_score, total, unique_ratio, avg_words, readability)
+# --- Student Interface & Feedback ---
+approved_vocab      = load_vocab_from_csv()
+student_codes       = load_student_codes()
+log_data            = load_submission_log()
+connectors_by_level = load_connectors_from_csv()
 
-# --- Why these scores and feedback ---
-def explain_scores(content_score, grammar_score, vocab_score, structure_score, unique_ratio, gpt_results):
+level = st.selectbox("Select your level", ["A1","A2","B1","B2"])
+tasks = ["Formal Letter","Informal Letter"]
+if level in ("B1","B2"):
+    tasks.append("Opinion Essay")
+task_type = st.selectbox("Select task type", tasks)
+
+student_id = st.text_input("Enter your student code:")
+if not student_id:
+    st.warning("Please enter your student code.")
+    st.stop()
+if student_id not in student_codes:
+    st.error("❌ You are not authorized to use this app.")
+    st.stop()
+
+subs     = log_data.get(student_id, 0)
+max_subs = 40 if level == "A1" else 45
+if subs >= max_subs:
+    st.warning(f"⚠️ You have reached the maximum of {max_subs} submissions.")
+    st.stop()
+if subs >= max_subs - 12:
+    st.info("⏳ You have used most of your submission chances. Review carefully!")
+
+task_num = None
+task     = None
+if level == "A1":
+    task_num = st.number_input(
+        f"Choose a Schreiben task number (1–{len(a1_tasks)})",
+        1, len(a1_tasks), 1
+    )
+    task = a1_tasks.get(task_num)
+    st.markdown(f"### Aufgabe {task_num}: {task['task']}")
+    st.markdown("**Points:**")
+    for p in task["points"]:
+        st.markdown(f"- {p}")
+
+student_text = st.text_area("✏️ Write your letter or essay below:", height=300)
+
+if st.button("✅ Submit for Feedback"):
+    with st.spinner("🔄 Processing your submission…"):
+        if not student_text.strip():
+            st.warning("Please enter your text before submitting.")
+            st.stop()
+
+        gpt_results = grammar_check_with_gpt(student_text)
+        adv = detect_long_phrases(student_text, level)  # Long phrase detection for adv variable
+        (content_score, grammar_score, vocab_score,
+         structure_score, total, unique_ratio, avg_words,
+         readability) = score_text(student_text, level, gpt_results, adv)
+
+        feedback_text = generate_feedback_text(
+            level, task_type, task, content_score, grammar_score,
+            vocab_score, structure_score, total,
+            gpt_results, adv, [], student_text
+        )
+
+        save_for_training(
+            student_id=student_id,
+            level=level,
+            task_type=task_type,
+            task_num=task_num,
+            student_text=student_text,
+            gpt_results=gpt_results,
+            feedback_text=feedback_text
+        )
+
+        log_data[student_id] = subs + 1
+        save_submission_log(log_data)
+
+    # Display metrics and explanations
+    st.markdown(f"🧮 Readability: {readability} ({avg_words:.1f} w/s)")
+    st.metric("Content",    f"{content_score}/10")
+    st.metric("Grammar",    f"{grammar_score}/5")
+    st.metric("Vocabulary", f"{vocab_score}/5")
+    st.metric("Structure",  f"{structure_score}/5")
+    st.markdown(f"**Total: {total}/25**")
+
     st.markdown("**Why these scores?**")
     st.markdown(f"- 📖 Content: fixed = {content_score}/10")
     st.markdown(f"- ✏️ Grammar: {len(gpt_results)} errors ⇒ {grammar_score}/5")
     st.markdown(f"- 💬 Vocabulary: unique ratio {unique_ratio:.2f} ⇒ {vocab_score}/5")
     st.markdown(f"- 🔧 Structure: fixed = {structure_score}/5")
 
-# --- Annotate all the colors ---
-def annotate_text(student_text, gpt_results, long_phrases, connectors, level):
-    ann = student_text
-    colors = {
-        'Grammar':   '#e15759',   # 🔴 Red
-        'LongPhrase':'#f1c232',   # 🟡 Yellow
-        'Connector': '#6aa84f',   # 🟢 Green
-        'Passive':   '#e69138',   # 🟠 Orange
-        'LongSent':  '#cccccc',   # ⚪️ Gray
-        'Noun':      '#e69138',   # 🟠 Orange
-        'Repeat':    '#e15759',   # 🔴 Red underline
-    }
-    # 1) Grammar errors (red)
-    for line in gpt_results or []:
-        if "⇒" in line:
-            err = line.split("⇒")[0].strip(" `")
-            pat = rf"(?i)\b{re.escape(err)}\b"
-            ann = re.sub(pat,
-                         lambda m: f"<span style='background-color:{colors['Grammar']}; color:#fff'>{m.group(0)}</span>",
-                         ann)
-    # 2) Long phrase detection (yellow)
-    for phrase in long_phrases:
-        pat = re.escape(phrase)
-        ann = re.sub(pat,
-                     lambda m: f"<span title='Too long for {level}' style='background-color:{colors['LongPhrase']}; color:#000'>{m.group(0)}</span>",
-                     ann)
-    # 3) Connectors (green)
-    for conn in connectors.get(level, []):
-        pat = rf"(?i)\b{re.escape(conn)}\b"
-        ann = re.sub(pat,
-                     lambda m: f"<span style='background-color:{colors['Connector']}; color:#fff'>{m.group(0)}</span>",
-                     ann)
-    # 4) Passive constructions (orange background)
-    for pat in [r"\bwird\s+\w+\s+von\b", r"\bist\s+\w+\s+worden\b"]:
-        ann = re.sub(pat,
-                     lambda m: f"<span style='background-color:{colors['Passive']}; color:#000'>{m.group(0)}</span>",
-                     ann, flags=re.I)
-    # 5) Long sentences (gray)
-    ann = re.sub(r"([A-ZÄÖÜ][^\.!?]{100,}[\.!?])",
-                 lambda m: f"<span style='background-color:{colors['LongSent']}; color:#000'>{m.group(0)}</span>",
-                 ann)
-    # 6) Noun capitalization issues (orange background)
-    for det in [' der',' die',' das',' ein',' eine',' mein',' dein']:
-        pat = rf"(?<={det}\s)([a-zäöüß]+)\b"
-        ann = re.sub(pat,
-                     lambda m: f"<span style='background-color:{colors['Noun']}; color:#fff'>{m.group(0)}</span>",
-                     ann)
-    # 7) Double spaces (red border)
-    ann = re.sub(r" {2,}",
-                 lambda m: f"<span style='border:1px solid {colors['Grammar']}'>{m.group(0)}</span>",
-                 ann)
-    # 8) Missing space after comma (red border)
-    ann = re.sub(r",(?=[A-Za-zÖÜÄ])",
-                 lambda m: f"<span style='border:1px solid {colors['Grammar']}'>{m.group(0)}</span>",
-                 ann)
-    # 9) Repeated words (underline)
-    ann = re.sub(r"\b(\w+)\s+\1\b",
-                 lambda m: f"<span style='text-decoration:underline; color:{colors['Repeat']}'>{m.group(0)}</span>",
-                 ann, flags=re.I)
-    return ann.replace("\n", "  \n")
+    # Grammar suggestions list
+    if gpt_results:
+        st.markdown("**Grammar Suggestions:**")
+        for i, line in enumerate(gpt_results):
+            st.markdown(f"{i+1}. {line}", unsafe_allow_html=False)
+
+    # Connector hints
+    hints = sorted(connectors_by_level.get(level, []))[:4]
+    st.info(f"📝 Try connectors like: {', '.join(hints)}…")
+
+    # Annotated text
+    ann = annotate_text(student_text, gpt_results, adv, connectors_by_level, level)
+    st.markdown("**Annotated Text:**", unsafe_allow_html=True)
+    st.markdown(ann, unsafe_allow_html=True)
+
+    # 🔍 What was highlighted and why (list as needed)
+    st.markdown("### 🔍 What was highlighted and why")
+    # ... all your explanations, as in your original ...
+
+    st.download_button(
+        "💾 Download feedback",
+        data=feedback_text,
+        file_name="feedback.txt"
+    )
