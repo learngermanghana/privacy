@@ -562,19 +562,6 @@ if st.button("✅ Submit for Feedback"):
     st.markdown("**Annotated Text:**", unsafe_allow_html=True)
     st.markdown(ann, unsafe_allow_html=True)
 
-    # Color legend for students
-    st.markdown("""
-**What do the highlights mean?**
-
-- <span style='background-color:#e15759; color:#fff'>Red</span>: Grammar error  
-- <span style='background-color:#f1c232; color:#000'>Yellow</span>: Phrase is too long for your level  
-- <span style='background-color:#6aa84f; color:#fff'>Green</span>: Connector word (like <i>und</i>, <i>aber</i>, <i>weil</i>)  
-- <span style='background-color:#e69138; color:#fff'>Orange</span>: Passive voice or noun not capitalized  
-- <span style='background-color:#cccccc; color:#000'>Gray</span>: Very long sentence (over 100 characters)  
-- <span style='text-decoration:underline; color:#e15759'>Underlined</span>: Repeated word  
-- <span style='border:1px solid #e15759'>Red border</span>: Double space or missing space after comma  
-    """, unsafe_allow_html=True)
-
     # 🔍 What was highlighted and why
     st.markdown("### 🔍 What was highlighted and why")
 
