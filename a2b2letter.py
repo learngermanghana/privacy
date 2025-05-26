@@ -334,18 +334,40 @@ if teacher_mode and page == "Teacher Dashboard":
                 st.success(f"✅ {lvl} connectors updated.")
 
     with st.expander("👩‍🎓 Student Codes"):
-        student_codes = load_student_codes()
-        st.write(sorted(student_codes))
-        new_codes = st.text_area("Add student codes (comma-separated):")
+        student_codes = sorted(load_student_codes())
+        st.write("**Current student codes:**")
+        st.write(student_codes)
+
+        new_codes = st.text_area("Add student codes (comma-separated):", "")
         if st.button("Add to Student Codes"):
+            code_set = set(student_codes)
             for code in [s.strip() for s in new_codes.split(',') if s.strip()]:
-                student_codes.add(code)
+                code_set.add(code)
             with open(STUDENT_CODES_PATH, "w", encoding="utf-8", newline="") as f:
                 writer = csv.writer(f)
                 writer.writerow(["student_code"])
-                for c in sorted(student_codes):
+                for c in sorted(code_set):
                     writer.writerow([c])
             st.success("✅ Student codes updated.")
+            student_codes = sorted(load_student_codes())
+            st.write(student_codes)
+
+        # Remove a code
+        if student_codes:
+            code_to_remove = st.selectbox("Remove a student code:", student_codes)
+            if st.button("Remove Selected Code"):
+                code_set = set(student_codes)
+                code_set.discard(code_to_remove)
+                with open(STUDENT_CODES_PATH, "w", encoding="utf-8", newline="") as f:
+                    writer = csv.writer(f)
+                    writer.writerow(["student_code"])
+                    for c in sorted(code_set):
+                        writer.writerow([c])
+                st.success(f"✅ Student code '{code_to_remove}' removed.")
+                student_codes = sorted(load_student_codes())
+                st.write(student_codes)
+        else:
+            st.info("No student codes yet.")
 
     with st.expander("📈 Submission Log"):
         df_log = pd.DataFrame(load_submission_log().items(), columns=["student_code","count"])
@@ -382,8 +404,6 @@ def annotate_text(student_text, gpt_results, long_phrases, connectors_by_level, 
         'Noun':      '#e69138',
         'Repeat':    '#e15759'
     }
-
-    # 1) Grammar errors
     for line in gpt_results or []:
         if "⇒" in line:
             err = line.split("⇒")[0].strip(" `")
@@ -393,8 +413,6 @@ def annotate_text(student_text, gpt_results, long_phrases, connectors_by_level, 
                 lambda m: f"<span style='background-color:{colors['Grammar']}; color:#fff'>{m.group(0)}</span>",
                 ann
             )
-
-    # 2) Long phrases
     for phrase in long_phrases:
         pat = re.escape(phrase)
         ann = re.sub(
@@ -402,8 +420,6 @@ def annotate_text(student_text, gpt_results, long_phrases, connectors_by_level, 
             lambda m: f"<span title='Too long for {level}' style='background-color:{colors['Phrase']}; color:#000'>{m.group(0)}</span>",
             ann
         )
-
-    # 3) Connectors
     for conn in connectors_by_level.get(level, []):
         pat = rf"(?i)\b{re.escape(conn)}\b"
         ann = re.sub(
@@ -411,23 +427,17 @@ def annotate_text(student_text, gpt_results, long_phrases, connectors_by_level, 
             lambda m: f"<span style='background-color:{colors['Connector']}; color:#fff'>{m.group(0)}</span>",
             ann
         )
-
-    # 4) Passive
     for pat in [r"\bwird\s+\w+\s+von\b", r"\bist\s+\w+\s+worden\b"]:
         ann = re.sub(
             pat,
             lambda m: f"<span style='background-color:{colors['Passive']}; color:#000'>{m.group(0)}</span>",
             ann, flags=re.I
         )
-
-    # 5) Long sentences
     ann = re.sub(
         r"([A-ZÄÖÜ][^\.!?]{100,}[\.!?])",
         lambda m: f"<span style='background-color:{colors['LongSent']}; color:#000'>{m.group(0)}</span>",
         ann
     )
-
-    # 6) Noun capitalization
     for det in [' der',' die',' das',' ein',' eine',' mein',' dein']:
         pat = rf"(?<={det}\s)([a-zäöüß]+)\b"
         ann = re.sub(
@@ -435,8 +445,6 @@ def annotate_text(student_text, gpt_results, long_phrases, connectors_by_level, 
             lambda m: f"<span style='background-color:{colors['Noun']}; color:#fff'>{m.group(0)}</span>",
             ann
         )
-
-    # 7) Double spaces & missing space after comma
     ann = re.sub(
         r" {2,}",
         lambda m: f"<span style='border:1px solid {colors['Grammar']}'>{m.group(0)}</span>",
@@ -447,14 +455,11 @@ def annotate_text(student_text, gpt_results, long_phrases, connectors_by_level, 
         lambda m: f"<span style='border:1px solid {colors['Grammar']}'>{m.group(0)}</span>",
         ann
     )
-
-    # 8) Repeated words
     ann = re.sub(
         r"\b(\w+)\s+\1\b",
         lambda m: f"<span style='text-decoration:underline; color:{colors['Repeat']}'>{m.group(0)}</span>",
         ann, flags=re.I
     )
-
     return ann.replace("\n", "  \n")
 
 # --- Student Interface & Feedback ---
@@ -487,7 +492,8 @@ if subs >= max_subs - 12:
 
 if level == "A1":
     task_num = st.number_input(
-        f"Choose a Schreiben task number (1–{len(a1_tasks)})", 1, len(a1_tasks), 1
+        f"Choose a Schreiben task number (1–{len(a1_tasks)})",
+        1, len(a1_tasks), 1
     )
     task = a1_tasks.get(task_num)
     st.markdown(f"### Aufgabe {task_num}: {task['task']}")
@@ -557,54 +563,45 @@ if st.button("✅ Submit for Feedback"):
     st.markdown("**Annotated Text:**", unsafe_allow_html=True)
     st.markdown(ann, unsafe_allow_html=True)
 
-    # Annotated text
-    ann = annotate_text(student_text, gpt_results, adv, connectors_by_level, level)
-    st.markdown("**Annotated Text:**", unsafe_allow_html=True)
-    st.markdown(ann, unsafe_allow_html=True)
+    st.markdown("""
+**What do the highlights mean?**
+
+- <span style='background-color:#e15759; color:#fff'>Red</span>: Grammar error  
+- <span style='background-color:#f1c232; color:#000'>Yellow</span>: Phrase is too long for your level  
+- <span style='background-color:#6aa84f; color:#fff'>Green</span>: Connector word (like <i>und</i>, <i>aber</i>, <i>weil</i>)  
+- <span style='background-color:#e69138; color:#fff'>Orange</span>: Passive voice or noun not capitalized  
+- <span style='background-color:#cccccc; color:#000'>Gray</span>: Very long sentence (over 100 characters)  
+- <span style='text-decoration:underline; color:#e15759'>Underlined</span>: Repeated word  
+- <span style='border:1px solid #e15759'>Red border</span>: Double space or missing space after comma  
+    """, unsafe_allow_html=True)
 
     # 🔍 What was highlighted and why
     st.markdown("### 🔍 What was highlighted and why")
-
-    # 1. Grammar errors
     if gpt_results:
         st.markdown("- 🔴 Grammar errors: " + ", ".join(e.split("⇒")[0].strip(" `") for e in gpt_results))
-    # 2. Too-long phrase(s)
     if adv:
         st.markdown("- 🟡 Too-long phrase(s): " + ", ".join(adv))
-    # 3. Connectors used
     if used_connectors:
         st.markdown("- 🟢 Connectors used: " + ", ".join(used_connectors))
 
-    # 4. Passive voice
-    passives = re.findall(r"\b(?:wird\s+\w+\s+von|ist\s+\w+\s+worden)\b", student_text, flags=re.I)
-    if passives:
-        st.markdown("- 🟠 Passive voice flagged: " + ", ".join(passives))
-
-    # 5. Long sentences
+    passives   = re.findall(r"\b(?:wird\s+\w+\s+von|ist\s+\w+\s+worden)\b", student_text, flags=re.I)
     long_sents = re.findall(r"([A-ZÄÖÜ][^\.!?]{100,}[\.!?])", student_text)
-    if long_sents:
-        st.markdown("- ⚪️ Long sentence(s): " + " | ".join(long_sents[:3]) + (" ..." if len(long_sents)>3 else ""))
+    noun_issues= re.findall(r"\b(?:der|die|das|ein|eine|mein|dein)\s+([a-zäöüß]+)\b", student_text, flags=re.I)
+    ds         = re.findall(r" {2,}", student_text)
+    mc         = re.findall(r",(?=[A-Za-zÖÜÄ])", student_text)
+    repeats    = re.findall(r"\b(\w+)\s+\1\b", student_text, flags=re.I)
 
-    # 6. Noun capitalization issues
-    noun_issues = re.findall(r"\b(?:der|die|das|ein|eine|mein|dein)\s+([a-zäöüß]+)\b", student_text, flags=re.I)
-    if noun_issues:
-        st.markdown("- 🟠 Noun capitalization missing: " + ", ".join(noun_issues))
-
-    # 7. Punctuation issues
-    ds = re.findall(r" {2,}", student_text)
-    mc = re.findall(r",(?=[A-Za-zÖÜÄ])", student_text)
+    if passives:    st.markdown("- 🟠 Passive voice flagged: " + ", ".join(passives))
+    if long_sents:  st.markdown("- ⚪️ Long sentence(s): " + " | ".join(long_sents[:3]) + (" ..." if len(long_sents)>3 else ""))
+    if noun_issues: st.markdown("- 🟠 Noun capitalization missing: " + ", ".join(noun_issues))
     if ds or mc:
         issues = []
         if ds: issues.append(f"{len(ds)} double space(s)")
         if mc: issues.append(f"{len(mc)} comma-space issue(s)")
         st.markdown("- 🔴 Punctuation issues: " + "; ".join(issues))
+    if repeats:     st.markdown("- 🔴 Repeated words: " + ", ".join(sorted(set(repeats))))
 
-    # 8. Repeated words
-    repeats = re.findall(r"\b(\w+)\s+\1\b", student_text, flags=re.I)
-    if repeats:
-        st.markdown("- 🔴 Repeated words: " + ", ".join(sorted(set(repeats))))
-
-    # Download feedback
     st.download_button("💾 Download feedback", data=feedback_text, file_name="feedback.txt")
+
 
 
