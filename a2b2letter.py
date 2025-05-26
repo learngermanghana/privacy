@@ -292,7 +292,7 @@ if teacher_mode:
     page = st.sidebar.radio(
         "Go to:",
         ["Student View", "Teacher Dashboard"],
-        key="teacher_page"       # ← also give this radio a key
+        key="Moxflex029"     
     )
 else:
     page = "Student View"
@@ -427,25 +427,19 @@ if teacher_mode and page == "Teacher Dashboard":
     st.stop()
 
 # --- Scoring Helper ---
-import re  # ensure this is at the top of your file
+import re  # ensure this at top
+
 def score_text(student_text, level, gpt_results, adv):
-    """
-    Returns content_score, grammar_score, vocab_score,
-    structure_score, total, unique_ratio, avg_words, readability
-    """
     words = re.findall(r"\w+", student_text.lower())
     unique_ratio = len(set(words)) / len(words) if words else 0
-
     sentences = re.split(r"[.!?]", student_text)
     avg_words = len(words) / max(1, len([s for s in sentences if s.strip()]))
-
     if avg_words <= 12:
         readability = "Easy"
     elif avg_words <= 17:
         readability = "Medium"
     else:
         readability = "Hard"
-
     content_score   = 10
     grammar_score   = max(1, 5 - len(gpt_results))
     vocab_score     = min(5, int((len(set(words)) / len(words)) * 5))
@@ -453,18 +447,46 @@ def score_text(student_text, level, gpt_results, adv):
         vocab_score = max(1, vocab_score - 1)
     structure_score = 5
     total           = content_score + grammar_score + vocab_score + structure_score
+    return (content_score, grammar_score, vocab_score,
+            structure_score, total, unique_ratio, avg_words, readability)
 
-    return (
-        content_score,
-        grammar_score,
-        vocab_score,
-        structure_score,
-        total,
-        unique_ratio,
-        avg_words,
-        readability
-    )
+# --- Feedback-Text Helper ---
+def generate_feedback_text(level, task_type, task,
+                           content_score, grammar_score, vocab_score,
+                           structure_score, total,
+                           gpt_results, adv, used, student_text):
+    return f"""Your Feedback – {task_type} ({level})
+Task: {task['task'] if task else ''}
+Scores:
+- Content: {content_score}/10
+- Grammar: {grammar_score}/5
+- Vocabulary: {vocab_score}/5
+- Structure: {structure_score}/5
+Total: {total}/25
 
+Grammar Suggestions:
+{chr(10).join(gpt_results) if gpt_results else 'No major grammar errors detected.'}
+
+Advanced Vocabulary:
+{', '.join(adv) if adv else 'None'}
+
+Connectors Used:
+{', '.join(used) if used else 'None'}
+
+Your Text:
+{student_text}
+"""
+
+# --- STUDENT VIEW ---
+approved_vocab      = load_vocab_from_csv()
+student_codes       = load_student_codes()
+log_data            = load_submission_log()
+connectors_by_level = load_connectors_from_csv()
+
+level = st.selectbox("Select your level", ["A1","A2","B1","B2"])
+tasks = ["Formal Letter","Informal Letter"]
+if level in ("B1","B2"): tasks.append("Opinion Essay")
+task_type = st.selectbox("Select task type", tasks)
 
 # --- STUDENT VIEW ---
 # Always load latest data
