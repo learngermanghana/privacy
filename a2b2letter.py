@@ -323,17 +323,8 @@ def download_training_data():
 # Teacher Dashboard
 if teacher_mode and page == "Teacher Dashboard":
     st.header("📋 Teacher Dashboard")
-
-    with st.expander("📝 Edit Approved Vocabulary (A1/A2)"):
-        vocab = load_vocab_from_csv()
-        for lvl in ["A1", "A2"]:
-            current = ", ".join(sorted(vocab.get(lvl, set())))
-            new_vocab = st.text_area(f"{lvl} Vocabulary (comma-separated):", current, key=f"vocab_{lvl}")
-            if st.button(f"Update {lvl} Vocab", key=f"btn_vocab_{lvl}"):
-                words = {w.strip().lower() for w in new_vocab.split(",") if w.strip()}
-                vocab[lvl] = words
-                save_vocab_to_csv(vocab)
-                st.success(f"✅ {lvl} vocabulary updated.")
+if teacher_mode and page == "Teacher Dashboard":
+    st.header("📋 Teacher Dashboard")
 
     with st.expander("🔗 Edit Approved Connectors (A1–B2)"):
         connectors = load_connectors_from_csv()
