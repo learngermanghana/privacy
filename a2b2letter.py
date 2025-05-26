@@ -652,10 +652,10 @@ if submit:
         st.warning(f"⚠️ Too-advanced words: {', '.join(adv)}")
 
     st.markdown(f"🧮 Readability: {readability} ({avg_words:.1f} w/s)")
-    st.metric("Content",    f"{content_score}/10", key="metric_content")
-    st.metric("Grammar",    f"{grammar_score}/5",  key="metric_grammar")
-    st.metric("Vocabulary", f"{vocab_score}/5",    key="metric_vocab")
-    st.metric("Structure",  f"{structure_score}/5", key="metric_structure")
+    st.metric("Content",    f"{content_score}/10")
+    st.metric("Grammar",    f"{grammar_score}/5")
+    st.metric("Vocabulary", f"{vocab_score}/5")
+    st.metric("Structure",  f"{structure_score}/5")
     st.markdown(f"**Total: {total}/25**")
 
     # Explain scores
