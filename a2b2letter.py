@@ -302,6 +302,7 @@ if teacher_mode:
 else:
     page = "Student View"
 
+# Utility to download training data
 def download_training_data():
     if os.path.exists(TRAINING_DATA_PATH) and os.stat(TRAINING_DATA_PATH).st_size > 0:
         with open(TRAINING_DATA_PATH, 'rb') as f:
@@ -314,8 +315,10 @@ def download_training_data():
     else:
         st.info("No training data collected yet.")
 
+# Teacher Dashboard
 if teacher_mode and page == "Teacher Dashboard":
     st.header("📋 Teacher Dashboard")
+
     with st.expander("📝 Edit Approved Vocabulary (A1/A2)"):
         vocab = load_vocab_from_csv()
         for lvl in ["A1", "A2"]:
@@ -404,8 +407,7 @@ if subs >= max_subs:
 if subs >= max_subs - 12:
     st.info("⏳ You have used most of your submission chances. Review carefully!")
 
-task_num = None
-task     = None
+# A1-specific task selection
 if level == "A1":
     task_num = st.number_input(
         f"Choose a Schreiben task number (1–{len(a1_tasks)})",
@@ -416,6 +418,9 @@ if level == "A1":
     st.markdown("**Points:**")
     for p in task["points"]:
         st.markdown(f"- {p}")
+else:
+    task_num = None
+    task = None
 
 student_text = st.text_area("✏️ Write your letter or essay below:", height=300)
 
@@ -428,28 +433,28 @@ if st.button("✅ Submit for Feedback"):
         # 1. Grammar check
         gpt_results = grammar_check_with_gpt(student_text)
 
-        # 2. Long phrase/advanced vocab check for A1/A2
+        # 2. Long phrase/advanced vocab detection
         adv = detect_long_phrases(student_text, level)
 
-        # 3. Find connectors actually used in the answer
+        # 3. Connectors used
         used_connectors = [
             c for c in connectors_by_level.get(level, [])
             if c.lower() in student_text.lower()
         ]
 
-        # 4. Score calculation (must match your function definition)
+        # 4. Score calculation
         (content_score, grammar_score, vocab_score,
          structure_score, total, unique_ratio, avg_words,
          readability) = score_text(student_text, level, gpt_results, adv)
 
-        # 5. Feedback text (must match your function definition)
+        # 5. Generate feedback text
         feedback_text = generate_feedback_text(
             level, task_type, task, content_score, grammar_score,
             vocab_score, structure_score, total,
             gpt_results, adv, used_connectors, student_text
         )
 
-        # 6. Save for AI training
+        # 6. Save for training and update log
         save_for_training(
             student_id=student_id,
             level=level,
@@ -459,12 +464,10 @@ if st.button("✅ Submit for Feedback"):
             gpt_results=gpt_results,
             feedback_text=feedback_text
         )
-
-        # 7. Update and persist submission log
         log_data[student_id] = subs + 1
         save_submission_log(log_data)
 
-    # Display metrics and explanations
+    # Display metrics
     st.markdown(f"🧮 Readability: {readability} ({avg_words:.1f} w/s)")
     st.metric("Content",    f"{content_score}/10")
     st.metric("Grammar",    f"{grammar_score}/5")
@@ -472,17 +475,18 @@ if st.button("✅ Submit for Feedback"):
     st.metric("Structure",  f"{structure_score}/5")
     st.markdown(f"**Total: {total}/25**")
 
+    # Why these scores
     st.markdown("**Why these scores?**")
     st.markdown(f"- 📖 Content: fixed = {content_score}/10")
     st.markdown(f"- ✏️ Grammar: {len(gpt_results)} errors ⇒ {grammar_score}/5")
     st.markdown(f"- 💬 Vocabulary: unique ratio {unique_ratio:.2f} ⇒ {vocab_score}/5")
     st.markdown(f"- 🔧 Structure: fixed = {structure_score}/5")
 
-    # Grammar suggestions list
+    # Grammar suggestions
     if gpt_results:
         st.markdown("**Grammar Suggestions:**")
-        for i, line in enumerate(gpt_results):
-            st.markdown(f"{i+1}. {line}", unsafe_allow_html=False)
+        for i, line in enumerate(gpt_results, 1):
+            st.markdown(f"{i}. {line}")
 
     # Connector hints
     hints = sorted(connectors_by_level.get(level, []))[:4]
@@ -493,73 +497,46 @@ if st.button("✅ Submit for Feedback"):
     st.markdown("**Annotated Text:**", unsafe_allow_html=True)
     st.markdown(ann, unsafe_allow_html=True)
 
-    # 🔍 What was highlighted and why
+    # Highlight explanations
     st.markdown("### 🔍 What was highlighted and why")
-
-    # 1. Grammar errors (red)
     if gpt_results:
-        st.markdown(
-            "- 🔴 **Grammar errors** (" + str(len(gpt_results)) + "): " +
-            ", ".join(line.split("⇒")[0].strip(" `") for line in gpt_results)
-        )
-
-    # 2. Advanced vocab / long phrase (yellow)
+        st.markdown("- 🔴 Grammar errors: " + ", ".join(e.split("⇒")[0].strip(" `") for e in gpt_results))
     if adv:
-        st.markdown("- 🟡 **Too-long phrase(s) flagged for your level**: " + ", ".join(adv))
-
-    # 3. Approved connectors (green)
+        st.markdown("- 🟡 Too-long phrase(s): " + ", ".join(adv))
     if used_connectors:
-        st.markdown("- 🟢 **Connectors used correctly**: " + ", ".join(used_connectors))
+        st.markdown("- 🟢 Connectors used: " + ", ".join(used_connectors))
 
-    # 4. Passive-voice (orange)
-    passives = re.findall(
-        r"\b(?:wird\s+\w+\s+von|ist\s+\w+\s+worden)\b",
-        student_text, flags=re.I
-    )
+    # Passive voice
+    passives = re.findall(r"\b(?:wird\s+\w+\s+von|ist\s+\w+\s+worden)\b", student_text, flags=re.I)
     if passives:
-        st.markdown("- 🟠 **Passive constructions flagged**: " + ", ".join(passives))
+        st.markdown("- 🟠 Passive voice flagged: " + ", ".join(passives))
 
-    # 5. Long sentences (gray)
-    long_sents = re.findall(
-        r"([A-ZÄÖÜ][^\.!?]{100,}[\.!?])",
-        student_text
-    )
+    # Long sentences
+    long_sents = re.findall(r"([A-ZÄÖÜ][^\.!?]{100,}[\.!?])", student_text)
     if long_sents:
-        st.markdown(
-            "- ⚪️ **Long sentence(s)**: " +
-            " | ".join(long_sents[:3]) +
-            (" ..." if len(long_sents) > 3 else "")
-        )
+        st.markdown("- ⚪️ Long sentence(s): " + " | ".join(long_sents[:3]) + (" ..." if len(long_sents)>3 else ""))
 
-    # 6. Noun capitalization issues (orange)
-    noun_issues = re.findall(
-        r"\b(?:der|die|das|ein|eine|mein|dein)\s+([a-zäöüß]+)\b",
-        student_text,
-        flags=re.I
-    )
+    # Noun capitalization issues
+    noun_issues = re.findall(r"\b(?:der|die|das|ein|eine|mein|dein)\s+([a-zäöüß]+)\b", student_text, flags=re.I)
     if noun_issues:
-        st.markdown("- 🟠 **Noun capitalization missing**: " + ", ".join(noun_issues))
+        st.markdown("- 🟠 Noun capitalization missing: " + ", ".join(noun_issues))
 
-    # 7. Punctuation issues (red)
-    double_spaces = re.findall(r" {2,}", student_text)
-    missing_comma_space = re.findall(r",(?=[A-Za-zÖÜÄ])", student_text)
-    if double_spaces or missing_comma_space:
+    # Punctuation issues
+    ds = re.findall(r" {2,}", student_text)
+    mc = re.findall(r",(?=[A-Za-zÖÜÄ])", student_text)
+    if ds or mc:
         issues = []
-        if double_spaces:
-            issues.append(f"{len(double_spaces)} double-space(s)")
-        if missing_comma_space:
-            issues.append(f"{len(missing_comma_space)} comma-space issue(s)")
-        st.markdown("- 🔴 **Punctuation issues**: " + "; ".join(issues))
+        if ds: issues.append(f"{len(ds)} double space(s)")
+        if mc: issues.append(f"{len(mc)} comma-space issue(s)")
+        st.markdown("- 🔴 Punctuation issues: " + "; ".join(issues))
 
-    # 8. Repeated words (underline)
+    # Repeated words
     repeats = re.findall(r"\b(\w+)\s+\1\b", student_text, flags=re.I)
     if repeats:
-        st.markdown("- 🔴 **Repeated words**: " + ", ".join(sorted(set(repeats))))
+        st.markdown("- 🔴 Repeated words: " + ", ".join(sorted(set(repeats))))
 
     # Download feedback
     st.download_button(
-        "💾 Download feedback",
-        data=feedback_text,
-        file_name="feedback.txt",
-        key="download_feedback"
+        "💾 Download feedback", data=feedback_text,
+        file_name="feedback.txt"
     )
