@@ -575,32 +575,6 @@ if st.button("✅ Submit for Feedback"):
 - <span style='border:1px solid #e15759'>Red border</span>: Double space or missing space after comma  
     """, unsafe_allow_html=True)
 
-    # 🔍 What was highlighted and why
-    st.markdown("### 🔍 What was highlighted and why")
-    if gpt_results:
-        st.markdown("- 🔴 Grammar errors: " + ", ".join(e.split("⇒")[0].strip(" `") for e in gpt_results))
-    if adv:
-        st.markdown("- 🟡 Too-long phrase(s): " + ", ".join(adv))
-    if used_connectors:
-        st.markdown("- 🟢 Connectors used: " + ", ".join(used_connectors))
-
-    passives   = re.findall(r"\b(?:wird\s+\w+\s+von|ist\s+\w+\s+worden)\b", student_text, flags=re.I)
-    long_sents = re.findall(r"([A-ZÄÖÜ][^\.!?]{100,}[\.!?])", student_text)
-    noun_issues= re.findall(r"\b(?:der|die|das|ein|eine|mein|dein)\s+([a-zäöüß]+)\b", student_text, flags=re.I)
-    ds         = re.findall(r" {2,}", student_text)
-    mc         = re.findall(r",(?=[A-Za-zÖÜÄ])", student_text)
-    repeats    = re.findall(r"\b(\w+)\s+\1\b", student_text, flags=re.I)
-
-    if passives:    st.markdown("- 🟠 Passive voice flagged: " + ", ".join(passives))
-    if long_sents:  st.markdown("- ⚪️ Long sentence(s): " + " | ".join(long_sents[:3]) + (" ..." if len(long_sents)>3 else ""))
-    if noun_issues: st.markdown("- 🟠 Noun capitalization missing: " + ", ".join(noun_issues))
-    if ds or mc:
-        issues = []
-        if ds: issues.append(f"{len(ds)} double space(s)")
-        if mc: issues.append(f"{len(mc)} comma-space issue(s)")
-        st.markdown("- 🔴 Punctuation issues: " + "; ".join(issues))
-    if repeats:     st.markdown("- 🔴 Repeated words: " + ", ".join(sorted(set(repeats))))
-
     st.download_button("💾 Download feedback", data=feedback_text, file_name="feedback.txt")
 
 
