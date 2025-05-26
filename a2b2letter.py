@@ -425,18 +425,31 @@ if st.button("✅ Submit for Feedback"):
             st.warning("Please enter your text before submitting.")
             st.stop()
 
+        # 1. Grammar check
         gpt_results = grammar_check_with_gpt(student_text)
-        adv = detect_long_phrases(student_text, level)  # Long phrase detection for adv variable
+
+        # 2. Long phrase/advanced vocab check for A1/A2
+        adv = detect_long_phrases(student_text, level)
+
+        # 3. Find connectors actually used in the answer
+        used_connectors = [
+            c for c in connectors_by_level.get(level, [])
+            if c.lower() in student_text.lower()
+        ]
+
+        # 4. Score calculation (match your definition!)
         (content_score, grammar_score, vocab_score,
          structure_score, total, unique_ratio, avg_words,
          readability) = score_text(student_text, level, gpt_results, adv)
 
+        # 5. Feedback text (match your definition!)
         feedback_text = generate_feedback_text(
             level, task_type, task, content_score, grammar_score,
             vocab_score, structure_score, total,
-            gpt_results, adv, [], student_text
+            gpt_results, adv, used_connectors, student_text
         )
 
+        # 6. Save for AI training
         save_for_training(
             student_id=student_id,
             level=level,
@@ -447,6 +460,7 @@ if st.button("✅ Submit for Feedback"):
             feedback_text=feedback_text
         )
 
+        # 7. Update and persist submission log
         log_data[student_id] = subs + 1
         save_submission_log(log_data)
 
