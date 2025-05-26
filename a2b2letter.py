@@ -282,12 +282,21 @@ a1_tasks = {
 
 # --- Teacher Settings ---
 st.sidebar.header("🔧 Teacher Settings")
-teacher_password = st.sidebar.text_input("🔒 Enter teacher password", type="password")
+teacher_password = st.sidebar.text_input(
+    "🔒 Enter teacher password",
+    type="password",
+    key="admin123"  
+)
 teacher_mode = (teacher_password == "Felix029")
 if teacher_mode:
-    page = st.sidebar.radio("Go to:", ["Student View", "Teacher Dashboard"])
+    page = st.sidebar.radio(
+        "Go to:",
+        ["Student View", "Teacher Dashboard"],
+        key="teacher_page"       # ← also give this radio a key
+    )
 else:
     page = "Student View"
+
 
 # Reusable training-data download
 def download_training_data():
