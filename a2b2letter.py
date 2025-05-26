@@ -576,16 +576,16 @@ if level == "A1":
         st.markdown(f"- {p}")
 
 # Submission form
-with st.form("feedback_form", key="feedback_form_key"):
+with st.form(key="feedback_form"):
     student_text = st.text_area(
         "✏️ Write your letter or essay below:",
         height=300,
         key="student_text_area"
     )
     submit = st.form_submit_button(
-        "✅ Submit for Feedback",
-        key="submit_button"
+        "✅ Submit for Feedback"
     )
+
 
 if submit:
     with st.spinner("🔄 Processing your submission…"):
