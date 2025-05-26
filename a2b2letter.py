@@ -437,12 +437,12 @@ if st.button("✅ Submit for Feedback"):
             if c.lower() in student_text.lower()
         ]
 
-        # 4. Score calculation (match your definition!)
+        # 4. Score calculation (must match your function definition)
         (content_score, grammar_score, vocab_score,
          structure_score, total, unique_ratio, avg_words,
          readability) = score_text(student_text, level, gpt_results, adv)
 
-        # 5. Feedback text (match your definition!)
+        # 5. Feedback text (must match your function definition)
         feedback_text = generate_feedback_text(
             level, task_type, task, content_score, grammar_score,
             vocab_score, structure_score, total,
@@ -493,12 +493,73 @@ if st.button("✅ Submit for Feedback"):
     st.markdown("**Annotated Text:**", unsafe_allow_html=True)
     st.markdown(ann, unsafe_allow_html=True)
 
-    # 🔍 What was highlighted and why (list as needed)
+    # 🔍 What was highlighted and why
     st.markdown("### 🔍 What was highlighted and why")
-    # ... all your explanations, as in your original ...
 
+    # 1. Grammar errors (red)
+    if gpt_results:
+        st.markdown(
+            "- 🔴 **Grammar errors** (" + str(len(gpt_results)) + "): " +
+            ", ".join(line.split("⇒")[0].strip(" `") for line in gpt_results)
+        )
+
+    # 2. Advanced vocab / long phrase (yellow)
+    if adv:
+        st.markdown("- 🟡 **Too-long phrase(s) flagged for your level**: " + ", ".join(adv))
+
+    # 3. Approved connectors (green)
+    if used_connectors:
+        st.markdown("- 🟢 **Connectors used correctly**: " + ", ".join(used_connectors))
+
+    # 4. Passive-voice (orange)
+    passives = re.findall(
+        r"\b(?:wird\s+\w+\s+von|ist\s+\w+\s+worden)\b",
+        student_text, flags=re.I
+    )
+    if passives:
+        st.markdown("- 🟠 **Passive constructions flagged**: " + ", ".join(passives))
+
+    # 5. Long sentences (gray)
+    long_sents = re.findall(
+        r"([A-ZÄÖÜ][^\.!?]{100,}[\.!?])",
+        student_text
+    )
+    if long_sents:
+        st.markdown(
+            "- ⚪️ **Long sentence(s)**: " +
+            " | ".join(long_sents[:3]) +
+            (" ..." if len(long_sents) > 3 else "")
+        )
+
+    # 6. Noun capitalization issues (orange)
+    noun_issues = re.findall(
+        r"\b(?:der|die|das|ein|eine|mein|dein)\s+([a-zäöüß]+)\b",
+        student_text,
+        flags=re.I
+    )
+    if noun_issues:
+        st.markdown("- 🟠 **Noun capitalization missing**: " + ", ".join(noun_issues))
+
+    # 7. Punctuation issues (red)
+    double_spaces = re.findall(r" {2,}", student_text)
+    missing_comma_space = re.findall(r",(?=[A-Za-zÖÜÄ])", student_text)
+    if double_spaces or missing_comma_space:
+        issues = []
+        if double_spaces:
+            issues.append(f"{len(double_spaces)} double-space(s)")
+        if missing_comma_space:
+            issues.append(f"{len(missing_comma_space)} comma-space issue(s)")
+        st.markdown("- 🔴 **Punctuation issues**: " + "; ".join(issues))
+
+    # 8. Repeated words (underline)
+    repeats = re.findall(r"\b(\w+)\s+\1\b", student_text, flags=re.I)
+    if repeats:
+        st.markdown("- 🔴 **Repeated words**: " + ", ".join(sorted(set(repeats))))
+
+    # Download feedback
     st.download_button(
         "💾 Download feedback",
         data=feedback_text,
-        file_name="feedback.txt"
+        file_name="feedback.txt",
+        key="download_feedback"
     )
