@@ -203,15 +203,22 @@ def annotate_text(student_text, gpt_results, long_phrases, level):
     return ann.replace("\n", "  \n")
 
 # === Scoring & Feedback ===
-def score_text(student_text, gpt_results):
+def score_text(student_text, level, gpt_results, adv):
     words = re.findall(r"\w+", student_text.lower())
     unique_ratio = len(set(words)) / len(words) if words else 0
     sentences = re.split(r"[.!?]", student_text)
     avg_words = len(words) / max(1, len([s for s in sentences if s.strip()]))
-    readability = "Easy" if avg_words <= 12 else "Medium" if avg_words <= 17 else "Hard"
+    if avg_words <= 12:
+        readability = "Easy"
+    elif avg_words <= 17:
+        readability = "Medium"
+    else:
+        readability = "Hard"
     content_score   = 10
     grammar_score   = max(1, 5 - len(gpt_results))
-    vocab_score     = min(5, int(unique_ratio * 5))
+    vocab_score     = min(5, int((len(set(words)) / len(words)) * 5))
+    if adv:
+        vocab_score = max(1, vocab_score - 1)
     structure_score = 5
     total           = content_score + grammar_score + vocab_score + structure_score
     return (content_score, grammar_score, vocab_score,
