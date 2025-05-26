@@ -497,92 +497,48 @@ if st.button("✅ Submit for Feedback"):
     hints = sorted(connectors_by_level.get(level, []))[:4]
     st.info(f"📝 Try connectors like: {', '.join(hints)}…")
 
-def annotate_text(student_text, gpt_results, long_phrases, connectors_by_level, level):
-    ann = student_text
-    colors = {
-        'Grammar':   '#e15759',  # 🔴
-        'Phrase':    '#f1c232',  # 🟡
-        'Connector': '#6aa84f',  # 🟢
-        'Passive':   '#e69138',  # 🟠
-        'LongSent':  '#cccccc',  # ⚪️
-        'Noun':      '#e69138',  # 🟠
-        'Repeat':    '#e15759'   # 🔴 underline
-    }
+    # Annotated text
+    ann = annotate_text(student_text, gpt_results, adv, connectors_by_level, level)
+    st.markdown("**Annotated Text:**", unsafe_allow_html=True)
+    st.markdown(ann, unsafe_allow_html=True)
 
-    # 1) Grammar errors
-    for line in gpt_results or []:
-        if "⇒" in line:
-            err = line.split("⇒")[0].strip(" `")
-            pat = rf"(?i)\b{re.escape(err)}\b"
-            ann = re.sub(
-                pat,
-                lambda m: f"<span style='background-color:{colors['Grammar']}; color:#fff'>{m.group(0)}</span>",
-                ann
-            )
+    # Highlight explanations
+    st.markdown("### 🔍 What was highlighted and why")
+    if gpt_results:
+        st.markdown("- 🔴 Grammar errors: " + ", ".join(e.split("⇒")[0].strip(" `") for e in gpt_results))
+    if adv:
+        st.markdown("- 🟡 Too-long phrase(s): " + ", ".join(adv))
+    if used_connectors:
+        st.markdown("- 🟢 Connectors used: " + ", ".join(used_connectors))
 
-    # 2) Long phrases (A1/A2)
-    for phrase in long_phrases:
-        pat = re.escape(phrase)
-        ann = re.sub(
-            pat,
-            lambda m: f"<span title='Too long for {level}' style='background-color:{colors['Phrase']}; color:#000'>{m.group(0)}</span>",
-            ann
-        )
+    # Passive voice
+    passives = re.findall(r"\b(?:wird\s+\w+\s+von|ist\s+\w+\s+worden)\b", student_text, flags=re.I)
+    if passives:
+        st.markdown("- 🟠 Passive voice flagged: " + ", ".join(passives))
 
-    # 3) Approved connectors
-    for conn in connectors_by_level.get(level, []):
-        pat = rf"(?i)\b{re.escape(conn)}\b"
-        ann = re.sub(
-            pat,
-            lambda m: f"<span style='background-color:{colors['Connector']}; color:#fff'>{m.group(0)}</span>",
-            ann
-        )
+    # Long sentences
+    long_sents = re.findall(r"([A-ZÄÖÜ][^\.!?]{100,}[\.!?])", student_text)
+    if long_sents:
+        st.markdown("- ⚪️ Long sentence(s): " + " | ".join(long_sents[:3]) + (" ..." if len(long_sents)>3 else ""))
 
-    # 4) Passive constructions
-    for pat in [r"\bwird\s+\w+\s+von\b", r"\bist\s+\w+\s+worden\b"]:
-        ann = re.sub(
-            pat,
-            lambda m: f"<span style='background-color:{colors['Passive']}; color:#000'>{m.group(0)}</span>",
-            ann, flags=re.I
-        )
+    # Noun capitalization issues
+    noun_issues = re.findall(r"\b(?:der|die|das|ein|eine|mein|dein)\s+([a-zäöüß]+)\b", student_text, flags=re.I)
+    if noun_issues:
+        st.markdown("- 🟠 Noun capitalization missing: " + ", ".join(noun_issues))
 
-    # 5) Long sentences
-    ann = re.sub(
-        r"([A-ZÄÖÜ][^\.!?]{100,}[\.!?])",
-        lambda m: f"<span style='background-color:{colors['LongSent']}; color:#000'>{m.group(0)}</span>",
-        ann
-    )
+    # Punctuation issues
+    ds = re.findall(r" {2,}", student_text)
+    mc = re.findall(r",(?=[A-Za-zÖÜÄ])", student_text)
+    if ds or mc:
+        issues = []
+        if ds: issues.append(f"{len(ds)} double space(s)")
+        if mc: issues.append(f"{len(mc)} comma-space issue(s)")
+        st.markdown("- 🔴 Punctuation issues: " + "; ".join(issues))
 
-    # 6) Missing noun capitalization
-    for det in [' der',' die',' das',' ein',' eine',' mein',' dein']:
-        pat = rf"(?<={det}\s)([a-zäöüß]+)\b"
-        ann = re.sub(
-            pat,
-            lambda m: f"<span style='background-color:{colors['Noun']}; color:#fff'>{m.group(0)}</span>",
-            ann
-        )
-
-    # 7) Double spaces & missing space after comma
-    ann = re.sub(
-        r" {2,}",
-        lambda m: f"<span style='border:1px solid {colors['Grammar']}'>{m.group(0)}</span>",
-        ann
-    )
-    ann = re.sub(
-        r",(?=[A-Za-zÖÜÄ])",
-        lambda m: f"<span style='border:1px solid {colors['Grammar']}'>{m.group(0)}</span>",
-        ann
-    )
-
-    # 8) Repeated words
-    ann = re.sub(
-        r"\b(\w+)\s+\1\b",
-        lambda m: f"<span style='text-decoration:underline; color:{colors['Repeat']}'>{m.group(0)}</span>",
-        ann, flags=re.I
-    )
-
-    return ann.replace("\n", "  \n")
-
+    # Repeated words
+    repeats = re.findall(r"\b(\w+)\s+\1\b", student_text, flags=re.I)
+    if repeats:
+        st.markdown("- 🔴 Repeated words: " + ", ".join(sorted(set(repeats))))
 
     # Download feedback
     st.download_button(
