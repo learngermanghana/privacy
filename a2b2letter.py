@@ -426,6 +426,46 @@ if teacher_mode and page == "Teacher Dashboard":
 
     st.stop()
 
+# --- Scoring Helper ---
+import re  # ensure this is at the top of your file
+def score_text(student_text, level, gpt_results, adv):
+    """
+    Returns content_score, grammar_score, vocab_score,
+    structure_score, total, unique_ratio, avg_words, readability
+    """
+    words = re.findall(r"\w+", student_text.lower())
+    unique_ratio = len(set(words)) / len(words) if words else 0
+
+    sentences = re.split(r"[.!?]", student_text)
+    avg_words = len(words) / max(1, len([s for s in sentences if s.strip()]))
+
+    if avg_words <= 12:
+        readability = "Easy"
+    elif avg_words <= 17:
+        readability = "Medium"
+    else:
+        readability = "Hard"
+
+    content_score   = 10
+    grammar_score   = max(1, 5 - len(gpt_results))
+    vocab_score     = min(5, int((len(set(words)) / len(words)) * 5))
+    if adv:
+        vocab_score = max(1, vocab_score - 1)
+    structure_score = 5
+    total           = content_score + grammar_score + vocab_score + structure_score
+
+    return (
+        content_score,
+        grammar_score,
+        vocab_score,
+        structure_score,
+        total,
+        unique_ratio,
+        avg_words,
+        readability
+    )
+
+
 # --- STUDENT VIEW ---
 # Always load latest data
 approved_vocab      = load_vocab_from_csv()
