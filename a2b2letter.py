@@ -512,10 +512,7 @@ task_type = st.selectbox(
 
 # Writing Tips
 st.markdown("### ✍️ Structure & Tips")
-with st.expander(
-    "✍️ Writing Tips and Usage Advice",
-    key="writing_tips_expander"
-):
+with st.expander("✍️ Writing Tips and Usage Advice"):
     if level == "A1":
         st.markdown(
             "- Use simple present tense (ich bin, ich habe, ich wohne...)  \n"
