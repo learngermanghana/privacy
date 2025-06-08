@@ -134,7 +134,9 @@ def save_for_training(student_id, level, task_type, task_num, student_text, gpt_
     else:
         df.to_csv(TRAINING_DATA_PATH, mode='a', header=False, index=False)
 
-# --- Stage 2: Long Phrase Detection, Grammar Check, and Daily Usage Tracking ---
+# --- Stage 2: Long Phrase Detection, Grammar Check, and CSV Daily Usage Tracking ---
+
+USAGE_LOG_PATH = "usage_log.csv"
 
 def detect_long_phrases(text: str, level: str) -> list:
     """
@@ -180,32 +182,45 @@ def grammar_check_with_gpt(text: str) -> list:
     )
     return response.choices[0].message.content.strip().splitlines()
 
-# === Daily Usage Tracking Logic (in-memory, resets every day) ===
-
+import pytz
 def get_today_date():
     """Returns today's date as string in Ghana time (YYYY-MM-DD)."""
     ghana_tz = pytz.timezone('Africa/Accra')
     return datetime.now(ghana_tz).strftime("%Y-%m-%d")
 
-def get_student_usage(student_id):
-    """Get today's usage count for the student (from session)."""
-    if 'usage_log' not in st.session_state:
-        st.session_state['usage_log'] = {}
-    usage_log = st.session_state['usage_log']
-    today = get_today_date()
-    student_usage = usage_log.get(student_id, {})
-    usage_today = student_usage.get(today, 0)
-    return usage_today
+# === CSV-based usage log helpers ===
 
-def increment_student_usage(student_id):
-    """Increment usage count for student for today."""
-    if 'usage_log' not in st.session_state:
-        st.session_state['usage_log'] = {}
-    usage_log = st.session_state['usage_log']
-    today = get_today_date()
-    usage_log.setdefault(student_id, {})
-    usage_log[student_id][today] = usage_log[student_id].get(today, 0) + 1
-    st.session_state['usage_log'] = usage_log
+def load_usage_log():
+    """Load usage log from CSV. Returns dict {student: {date: count}}"""
+    usage = {}
+    if os.path.exists(USAGE_LOG_PATH):
+        with open(USAGE_LOG_PATH, newline='', encoding='utf-8') as f:
+            reader = csv.reader(f)
+            for row in reader:
+                if row and row[0] != "student_code":
+                    code, date, count = row
+                    usage.setdefault(code, {})[date] = int(count)
+    return usage
+
+def save_usage_log(usage):
+    """Save usage log to CSV."""
+    with open(USAGE_LOG_PATH, "w", newline='', encoding='utf-8') as f:
+        writer = csv.writer(f)
+        writer.writerow(["student_code", "date", "count"])
+        for code, datedict in usage.items():
+            for date, count in datedict.items():
+                writer.writerow([code, date, count])
+
+def get_student_usage(usage, student_id, today):
+    """Returns count for student on today's date."""
+    return usage.get(student_id, {}).get(today, 0)
+
+def increment_student_usage(usage, student_id, today):
+    """Increments usage for student today and saves CSV."""
+    usage.setdefault(student_id, {})
+    usage[student_id][today] = usage[student_id].get(today, 0) + 1
+    save_usage_log(usage)
+
 
 # --- Stage 3: Scoring, Feedback, and Annotation Functions ---
 
@@ -432,6 +447,7 @@ if teacher_mode and page == "Teacher Dashboard":
         download_training_data()
 
     st.stop()  # Prevents loading student view if teacher dashboard is active
+    
 # --- Stage 5: A1 Schreiben Tasks and Student Task Selection UI ---
 
 # === A1 Schreiben Task Bank (Sample) ===
@@ -488,6 +504,10 @@ approved_vocab      = load_vocab_from_csv()
 student_codes       = load_student_codes()
 connectors_by_level = load_connectors_from_csv()
 
+# --- CSV-based usage log: load usage_log and today's date ---
+usage_log = load_usage_log()
+today = get_today_date()
+
 # --- Student UI: Select level and task ---
 level = st.selectbox("Select your level", ["A1","A2","B1","B2"])
 tasks = ["Formal Letter","Informal Letter"]
@@ -503,8 +523,8 @@ if student_id not in student_codes:
     st.error("❌ You are not authorized to use this app.")
     st.stop()
 
-# --- Daily usage check ---
-usage_today = get_student_usage(student_id)
+# --- Daily usage check (CSV-based, persistent) ---
+usage_today = get_student_usage(usage_log, student_id, today)
 if usage_today >= DAILY_LIMIT:
     st.warning(f"⚠️ You have reached your daily limit of {DAILY_LIMIT} submissions. Please try again tomorrow.")
     st.stop()
@@ -525,6 +545,7 @@ if level == "A1":
 else:
     task_num = None
     task = None
+    
 # --- Stage 6: Student Submission Input & Feedback Logic ---
 
 student_text = st.text_area("✏️ Write your letter or essay below:", height=300)
@@ -559,7 +580,8 @@ if st.button("✅ Submit for Feedback"):
             gpt_results=gpt_results,
             feedback_text=feedback_text
         )
-        increment_student_usage(student_id)
+        # === CSV-based daily usage tracking (persistent) ===
+        increment_student_usage(usage_log, student_id, today)
 
     st.success("✅ Submission saved!")
 
