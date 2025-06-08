@@ -140,28 +140,23 @@ USAGE_LOG_PATH = "usage_log.csv"
 
 def detect_long_phrases(text: str, level: str) -> list:
     """
-    Find phrases that are too long for A1/A2 (6+/8+ words).
-    Returns list of long phrases.
+    For A1: highlight sentences over 10 words.
+    For A2: highlight sentences over 14 words.
+    For B1/B2: returns empty list (no flagging).
     """
-    thresh = 6 if level == "A1" else 8 if level == "A2" else 1000  # Only A1/A2
-    if level not in ("A1", "A2"):
+    if level == "A1":
+        thresh = 10
+    elif level == "A2":
+        thresh = 14
+    else:
         return []
-    tokens = [(m.group(0), m.start(), m.end()) for m in re.finditer(r"\b\w+\b", text)]
-    phrases = []
-    for i in range(len(tokens) - thresh + 1):
-        start_idx = tokens[i][1]
-        end_idx   = tokens[i + thresh - 1][2]
-        phrase = text[start_idx:end_idx]
-        if len(re.findall(r"\b\w+\b", phrase)) >= thresh:
-            phrases.append(phrase)
-    # Remove overlapping: keep only unique, longest
-    seen = set()
-    unique = []
-    for ph in phrases:
-        if ph not in seen:
-            seen.add(ph)
-            unique.append(ph)
-    return unique
+    # Split by sentence-ending punctuation
+    sentences = re.split(r'(?<=[.!?])\s+', text)
+    long_sentences = []
+    for s in sentences:
+        if len(re.findall(r'\w+', s)) > thresh:
+            long_sentences.append(s.strip())
+    return long_sentences
 
 def grammar_check_with_gpt(text: str) -> list:
     """
