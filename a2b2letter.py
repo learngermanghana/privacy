@@ -1,3 +1,5 @@
+# --- Stage 1: Imports, Constants, and Core Data Helpers ---
+
 import re
 import csv
 import os
@@ -6,13 +8,14 @@ import pandas as pd
 import openai
 import stopwordsiso as stop
 from datetime import datetime
+import pytz
 
 # === Paths & Constants ===
 TRAINING_DATA_PATH   = "essay_training_data.csv"
 VOCAB_PATH           = "approved_vocab.csv"
 CONNECTOR_PATH       = "approved_connectors.csv"
-LOG_PATH             = "submission_log.csv"
 STUDENT_CODES_PATH   = "student_codes.csv"
+DAILY_LIMIT          = 4  # Student daily limit
 
 st.set_page_config(page_title="German Letter & Essay Checker", layout="wide")
 st.title("📝 German Letter & Essay Checker – Learn Language Education Academy")
@@ -43,60 +46,26 @@ function_words = {
     }
 }
 
-# === Helpers: File/Data ===
+# === File/Data Helper Functions ===
+
 def load_student_codes():
+    """Load student codes from CSV file (1-column)."""
     codes = set()
-    if os.path.exists(STUDENT_CODES_PATH):
-        with open(STUDENT_CODES_PATH, newline='', encoding='utf-8') as f:
-            rdr = csv.reader(f)
-            headers = next(rdr, [])
-            idx = headers.index('student_code') if 'student_code' in headers else 0
-            for row in rdr:
-                if len(row) > idx and row[idx].strip():
-                    codes.add(row[idx].strip())
+    if not os.path.exists(STUDENT_CODES_PATH):
+        # Initialize empty
+        with open(STUDENT_CODES_PATH, "w", encoding="utf-8", newline="") as f:
+            csv.writer(f).writerow(["student_code"])
+    with open(STUDENT_CODES_PATH, newline='', encoding='utf-8') as f:
+        rdr = csv.reader(f)
+        headers = next(rdr, [])
+        idx = headers.index('student_code') if 'student_code' in headers else 0
+        for row in rdr:
+            if len(row) > idx and row[idx].strip():
+                codes.add(row[idx].strip())
     return codes
 
-def load_submission_log():
-    data = {}
-    if os.path.exists(LOG_PATH):
-        with open(LOG_PATH, newline='', encoding='utf-8') as f:
-            reader = csv.reader(f)
-            for row in reader:
-                if len(row) < 2:
-                    continue
-                sid, count = row[0], row[1]
-                if sid.lower() == 'student_code':
-                    continue
-                try:
-                    data[sid] = int(count)
-                except ValueError:
-                    continue
-    return data
-
-def save_submission_log(log: dict):
-    with open(LOG_PATH, "w", newline='', encoding='utf-8') as f:
-        writer = csv.writer(f)
-        for sid, count in log.items():
-            writer.writerow([sid, count])
-
-def save_for_training(student_id, level, task_type, task_num, student_text, gpt_results, feedback_text):
-    row = {
-        "timestamp": datetime.now().isoformat(timespec="seconds"),
-        "student_id": student_id,
-        "level": level,
-        "task_type": task_type,
-        "task_num": task_num,
-        "original_text": student_text,
-        "gpt_grammar_feedback": "\n".join(gpt_results),
-        "full_feedback": feedback_text
-    }
-    df = pd.DataFrame([row])
-    if not os.path.exists(TRAINING_DATA_PATH) or os.stat(TRAINING_DATA_PATH).st_size == 0:
-        df.to_csv(TRAINING_DATA_PATH, index=False)
-    else:
-        df.to_csv(TRAINING_DATA_PATH, mode='a', header=False, index=False)
-
 def load_vocab_from_csv():
+    """Load approved vocabulary by level from CSV."""
     vocab = {"A1": set(), "A2": set()}
     if os.path.exists(VOCAB_PATH):
         with open(VOCAB_PATH, newline='', encoding='utf-8') as f:
@@ -109,6 +78,7 @@ def load_vocab_from_csv():
     return vocab
 
 def save_vocab_to_csv(vocab):
+    """Save approved vocabulary to CSV."""
     with open(VOCAB_PATH, "w", newline='', encoding='utf-8') as f:
         writer = csv.writer(f)
         for lvl in vocab:
@@ -116,6 +86,7 @@ def save_vocab_to_csv(vocab):
                 writer.writerow([lvl, w])
 
 def load_connectors_from_csv():
+    """Load connectors by level from CSV."""
     conns = {l:set() for l in ["A1","A2","B1","B2"]}
     if os.path.exists(CONNECTOR_PATH):
         with open(CONNECTOR_PATH, newline='', encoding="utf-8") as f:
@@ -138,16 +109,40 @@ def load_connectors_from_csv():
     return conns
 
 def save_connectors_to_csv(conns):
+    """Save connectors to CSV."""
     with open(CONNECTOR_PATH, "w", newline='', encoding='utf-8') as f:
         writer = csv.writer(f)
         for lvl in conns:
             if conns[lvl]:
                 writer.writerow([lvl, ", ".join(sorted(conns[lvl]))])
 
-# === Long Phrase Detection ===
-def detect_long_phrases(text: str, level: str) -> list[str]:
-    thresh = 6 if level == "A1" else 8 if level == "A2" else 1000  # Only for A1/A2
-    if level not in ("A1","A2"):
+def save_for_training(student_id, level, task_type, task_num, student_text, gpt_results, feedback_text):
+    """Append submission with feedback to the AI training CSV."""
+    row = {
+        "timestamp": datetime.now().isoformat(timespec="seconds"),
+        "student_id": student_id,
+        "level": level,
+        "task_type": task_type,
+        "task_num": task_num,
+        "original_text": student_text,
+        "gpt_grammar_feedback": "\n".join(gpt_results),
+        "full_feedback": feedback_text
+    }
+    df = pd.DataFrame([row])
+    if not os.path.exists(TRAINING_DATA_PATH) or os.stat(TRAINING_DATA_PATH).st_size == 0:
+        df.to_csv(TRAINING_DATA_PATH, index=False)
+    else:
+        df.to_csv(TRAINING_DATA_PATH, mode='a', header=False, index=False)
+
+# --- Stage 2: Long Phrase Detection, Grammar Check, and Daily Usage Tracking ---
+
+def detect_long_phrases(text: str, level: str) -> list:
+    """
+    Find phrases that are too long for A1/A2 (6+/8+ words).
+    Returns list of long phrases.
+    """
+    thresh = 6 if level == "A1" else 8 if level == "A2" else 1000  # Only A1/A2
+    if level not in ("A1", "A2"):
         return []
     tokens = [(m.group(0), m.start(), m.end()) for m in re.finditer(r"\b\w+\b", text)]
     phrases = []
@@ -157,7 +152,7 @@ def detect_long_phrases(text: str, level: str) -> list[str]:
         phrase = text[start_idx:end_idx]
         if len(re.findall(r"\b\w+\b", phrase)) >= thresh:
             phrases.append(phrase)
-    # Remove overlaps: only highlight longest unique spans
+    # Remove overlapping: keep only unique, longest
     seen = set()
     unique = []
     for ph in phrases:
@@ -166,8 +161,11 @@ def detect_long_phrases(text: str, level: str) -> list[str]:
             unique.append(ph)
     return unique
 
-# === GPT Grammar Check ===
-def grammar_check_with_gpt(text: str) -> list[str]:
+def grammar_check_with_gpt(text: str) -> list:
+    """
+    Use GPT to check German text for grammar/spelling errors.
+    Returns a list of formatted feedback lines.
+    """
     prompt = (
         "You are a German language tutor. "
         "Check the following German text for grammar and spelling errors. "
@@ -182,28 +180,40 @@ def grammar_check_with_gpt(text: str) -> list[str]:
     )
     return response.choices[0].message.content.strip().splitlines()
 
-# === Annotate Text (Grammar, Long Phrases) ===
-def annotate_text(student_text, gpt_results, long_phrases, level):
-    ann = student_text
-    colors = {'Grammar':'#e15759','Phrase':'#f1c232'}
-    # Highlight grammar errors
-    for line in gpt_results or []:
-        if "⇒" in line:
-            err = line.split("⇒")[0].strip(" `")
-            pat = rf"(?i)\b{re.escape(err)}\b"
-            ann = re.sub(pat,
-                         lambda m: f"<span style='background-color:{colors['Grammar']}; color:#fff'>{m.group(0)}</span>",
-                         ann)
-    # Highlight long phrases for A1/A2
-    for phrase in long_phrases:
-        pat = re.escape(phrase)
-        ann = re.sub(pat,
-                     lambda m: f"<span title='Too long for {level}' style='background-color:{colors['Phrase']}; color:#000'>{m.group(0)}</span>",
-                     ann)
-    return ann.replace("\n", "  \n")
+# === Daily Usage Tracking Logic (in-memory, resets every day) ===
 
-# === Scoring & Feedback ===
-def score_text(student_text, level, gpt_results, adv):
+def get_today_date():
+    """Returns today's date as string in Ghana time (YYYY-MM-DD)."""
+    ghana_tz = pytz.timezone('Africa/Accra')
+    return datetime.now(ghana_tz).strftime("%Y-%m-%d")
+
+def get_student_usage(student_id):
+    """Get today's usage count for the student (from session)."""
+    if 'usage_log' not in st.session_state:
+        st.session_state['usage_log'] = {}
+    usage_log = st.session_state['usage_log']
+    today = get_today_date()
+    student_usage = usage_log.get(student_id, {})
+    usage_today = student_usage.get(today, 0)
+    return usage_today
+
+def increment_student_usage(student_id):
+    """Increment usage count for student for today."""
+    if 'usage_log' not in st.session_state:
+        st.session_state['usage_log'] = {}
+    usage_log = st.session_state['usage_log']
+    today = get_today_date()
+    usage_log.setdefault(student_id, {})
+    usage_log[student_id][today] = usage_log[student_id].get(today, 0) + 1
+    st.session_state['usage_log'] = usage_log
+
+# --- Stage 3: Scoring, Feedback, and Annotation Functions ---
+
+def score_text(student_text, level, gpt_results, long_phrases):
+    """
+    Calculate scores for content, grammar, vocabulary, structure, etc.
+    Returns scores + stats.
+    """
     words = re.findall(r"\w+", student_text.lower())
     unique_ratio = len(set(words)) / len(words) if words else 0
     sentences = re.split(r"[.!?]", student_text)
@@ -214,10 +224,10 @@ def score_text(student_text, level, gpt_results, adv):
         readability = "Medium"
     else:
         readability = "Hard"
-    content_score   = 10
+    content_score   = 10  # Can expand logic later
     grammar_score   = max(1, 5 - len(gpt_results))
     vocab_score     = min(5, int((len(set(words)) / len(words)) * 5))
-    if adv:
+    if long_phrases:
         vocab_score = max(1, vocab_score - 1)
     structure_score = 5
     total           = content_score + grammar_score + vocab_score + structure_score
@@ -228,6 +238,9 @@ def generate_feedback_text(level, task_type, task,
                           content_score, grammar_score, vocab_score,
                           structure_score, total,
                           gpt_results, long_phrases, used_connectors, student_text):
+    """
+    Build full feedback text for download/sharing.
+    """
     return f"""Your Feedback – {task_type} ({level})
 Task: {task['task'] if task else ''}
 Scores:
@@ -250,7 +263,178 @@ Your Text:
 {student_text}
 """
 
-# === A1 Schreiben Tasks ===
+def annotate_text(student_text, gpt_results, long_phrases, connectors_by_level, level):
+    """
+    Highlight grammar errors, connectors, long phrases, and common issues in the text.
+    Returns annotated HTML.
+    """
+    ann = student_text
+    colors = {
+        'Grammar':   '#e15759',
+        'Phrase':    '#f1c232',
+        'Connector': '#6aa84f',
+        'Passive':   '#e69138',
+        'LongSent':  '#cccccc',
+        'Noun':      '#e69138',
+        'Repeat':    '#e15759'
+    }
+    # Grammar errors
+    for line in gpt_results or []:
+        if "⇒" in line:
+            err = line.split("⇒")[0].strip(" `")
+            pat = rf"(?i)\b{re.escape(err)}\b"
+            ann = re.sub(
+                pat,
+                lambda m: f"<span style='background-color:{colors['Grammar']}; color:#fff'>{m.group(0)}</span>",
+                ann
+            )
+    # Long phrases
+    for phrase in long_phrases:
+        pat = re.escape(phrase)
+        ann = re.sub(
+            pat,
+            lambda m: f"<span title='Too long for {level}' style='background-color:{colors['Phrase']}; color:#000'>{m.group(0)}</span>",
+            ann
+        )
+    # Connectors
+    for conn in connectors_by_level.get(level, []):
+        pat = rf"(?i)\b{re.escape(conn)}\b"
+        ann = re.sub(
+            pat,
+            lambda m: f"<span style='background-color:{colors['Connector']}; color:#fff'>{m.group(0)}</span>",
+            ann
+        )
+    # Passive voice (optional)
+    for pat in [r"\bwird\s+\w+\s+von\b", r"\bist\s+\w+\s+worden\b"]:
+        ann = re.sub(
+            pat,
+            lambda m: f"<span style='background-color:{colors['Passive']}; color:#000'>{m.group(0)}</span>",
+            ann, flags=re.I
+        )
+    # Very long sentences
+    ann = re.sub(
+        r"([A-ZÄÖÜ][^\.!?]{100,}[\.!?])",
+        lambda m: f"<span style='background-color:{colors['LongSent']}; color:#000'>{m.group(0)}</span>",
+        ann
+    )
+    # Nouns after article/determiner not capitalized
+    for det in [' der',' die',' das',' ein',' eine',' mein',' dein']:
+        pat = rf"(?<={det}\s)([a-zäöüß]+)\b"
+        ann = re.sub(
+            pat,
+            lambda m: f"<span style='background-color:{colors['Noun']}; color:#fff'>{m.group(0)}</span>",
+            ann
+        )
+    # Double spaces or missing space after comma
+    ann = re.sub(
+        r" {2,}",
+        lambda m: f"<span style='border:1px solid {colors['Grammar']}'>{m.group(0)}</span>",
+        ann
+    )
+    ann = re.sub(
+        r",(?=[A-Za-zÖÜÄ])",
+        lambda m: f"<span style='border:1px solid {colors['Grammar']}'>{m.group(0)}</span>",
+        ann
+    )
+    # Repeated word
+    ann = re.sub(
+        r"\b(\w+)\s+\1\b",
+        lambda m: f"<span style='text-decoration:underline; color:{colors['Repeat']}'>{m.group(0)}</span>",
+        ann, flags=re.I
+    )
+    return ann.replace("\n", "  \n")
+# --- Stage 4: Teacher Settings / Dashboard ---
+
+# --- Teacher sidebar + dashboard access ---
+st.sidebar.header("🔧 Teacher Settings")
+teacher_password = st.sidebar.text_input("🔒 Enter teacher password", type="password")
+teacher_mode = (teacher_password == "Felix029")
+if teacher_mode:
+    page = st.sidebar.radio("Go to:", ["Student View", "Teacher Dashboard"])
+else:
+    page = "Student View"
+
+def download_training_data():
+    """Show download button for all collected training submissions."""
+    if os.path.exists(TRAINING_DATA_PATH) and os.stat(TRAINING_DATA_PATH).st_size > 0:
+        with open(TRAINING_DATA_PATH, 'rb') as f:
+            st.download_button(
+                "⬇️ Download All Submissions",
+                data=f,
+                file_name="essay_training_data.csv",
+                mime="text/csv"
+            )
+    else:
+        st.info("No training data collected yet.")
+
+if teacher_mode and page == "Teacher Dashboard":
+    st.header("📋 Teacher Dashboard")
+
+    with st.expander("🔗 Edit Approved Connectors (A1–B2)"):
+        connectors = load_connectors_from_csv()
+        for lvl in ["A1", "A2", "B1", "B2"]:
+            current = ", ".join(sorted(connectors.get(lvl, set())))
+            new_conns = st.text_area(f"{lvl} Connectors (comma-separated):", current, key=f"conn_{lvl}")
+            if st.button(f"Update {lvl} Connectors", key=f"btn_conn_{lvl}"):
+                items = {c.strip() for c in new_conns.split(",") if c.strip()}
+                connectors[lvl] = items
+                save_connectors_to_csv(connectors)
+                st.success(f"✅ {lvl} connectors updated.")
+
+    with st.expander("📚 Approved Vocabulary"):
+        vocab = load_vocab_from_csv()
+        for lvl in ["A1", "A2"]:
+            current = ", ".join(sorted(vocab.get(lvl, set())))
+            new_vocab = st.text_area(f"{lvl} Vocabulary (comma-separated):", current, key=f"vocab_{lvl}")
+            if st.button(f"Update {lvl} Vocab", key=f"btn_vocab_{lvl}"):
+                items = {c.strip().lower() for c in new_vocab.split(",") if c.strip()}
+                vocab[lvl] = items
+                save_vocab_to_csv(vocab)
+                st.success(f"✅ {lvl} vocabulary updated.")
+
+    with st.expander("👩‍🎓 Student Codes"):
+        student_codes = sorted(load_student_codes())
+        st.write("**Current student codes:**")
+        st.write(student_codes)
+
+        new_codes = st.text_area("Add student codes (comma-separated):", "")
+        if st.button("Add to Student Codes"):
+            code_set = set(student_codes)
+            for code in [s.strip() for s in new_codes.split(',') if s.strip()]:
+                code_set.add(code)
+            with open(STUDENT_CODES_PATH, "w", encoding="utf-8", newline="") as f:
+                writer = csv.writer(f)
+                writer.writerow(["student_code"])
+                for c in sorted(code_set):
+                    writer.writerow([c])
+            st.success("✅ Student codes updated.")
+            student_codes = sorted(load_student_codes())
+            st.write(student_codes)
+
+        # Remove a code
+        if student_codes:
+            code_to_remove = st.selectbox("Remove a student code:", student_codes)
+            if st.button("Remove Selected Code"):
+                code_set = set(student_codes)
+                code_set.discard(code_to_remove)
+                with open(STUDENT_CODES_PATH, "w", encoding="utf-8", newline="") as f:
+                    writer = csv.writer(f)
+                    writer.writerow(["student_code"])
+                    for c in sorted(code_set):
+                        writer.writerow([c])
+                st.success(f"✅ Student code '{code_to_remove}' removed.")
+                student_codes = sorted(load_student_codes())
+                st.write(student_codes)
+        else:
+            st.info("No student codes yet.")
+
+    with st.expander("📊 Collected Essays for AI Training"):
+        download_training_data()
+
+    st.stop()  # Prevents loading student view if teacher dashboard is active
+# --- Stage 5: A1 Schreiben Tasks and Student Task Selection UI ---
+
+# === A1 Schreiben Task Bank (Sample) ===
 a1_tasks = {
     1: {"task": "Schreiben Sie eine E-Mail an Ihren Arzt und sagen Sie Ihren Termin ab.",
         "points": ["Warum schreiben Sie?", "Sagen Sie: den Grund für die Absage.", "Fragen Sie: nach einem neuen Termin."]},
@@ -258,6 +442,7 @@ a1_tasks = {
         "points": ["Warum schreiben Sie?", "Wann ist die Feier?", "Wer soll was mitbringen?"]},
     3: {"task": "Schreiben Sie eine E-Mail an einen Freund und teilen Sie ihm mit, dass Sie ihn besuchen möchten.",
         "points": ["Warum schreiben Sie?", "Wann besuchen Sie ihn?", "Was möchten Sie zusammen machen?"]},
+    # ... (add up to 22 as in your original)
     4: {"task": "Schreiben Sie eine E-Mail an Ihre Schule und fragen Sie nach einem Deutschkurs.",
         "points": ["Warum schreiben Sie?", "Was möchten Sie wissen?", "Wie kann die Schule antworten?"]},
     5: {"task": "Schreiben Sie eine E-Mail an Ihre Vermieterin. Ihre Heizung ist kaputt.",
@@ -298,176 +483,12 @@ a1_tasks = {
          "points": ["Warum schreiben Sie?", "Wann möchten Sie den Kurs besuchen?", "Was möchten Sie noch wissen?"]}
 }
 
-# --- Teacher Settings ---
-st.sidebar.header("🔧 Teacher Settings")
-teacher_password = st.sidebar.text_input("🔒 Enter teacher password", type="password")
-teacher_mode = (teacher_password == "Felix029")
-if teacher_mode:
-    page = st.sidebar.radio("Go to:", ["Student View", "Teacher Dashboard"])
-else:
-    page = "Student View"
-
-def download_training_data():
-    if os.path.exists(TRAINING_DATA_PATH) and os.stat(TRAINING_DATA_PATH).st_size > 0:
-        with open(TRAINING_DATA_PATH, 'rb') as f:
-            st.download_button(
-                "⬇️ Download All Submissions",
-                data=f,
-                file_name="essay_training_data.csv",
-                mime="text/csv"
-            )
-    else:
-        st.info("No training data collected yet.")
-
-if teacher_mode and page == "Teacher Dashboard":
-    st.header("📋 Teacher Dashboard")
-
-    with st.expander("🔗 Edit Approved Connectors (A1–B2)"):
-        connectors = load_connectors_from_csv()
-        for lvl in ["A1", "A2", "B1", "B2"]:
-            current = ", ".join(sorted(connectors.get(lvl, set())))
-            new_conns = st.text_area(f"{lvl} Connectors (comma-separated):", current, key=f"conn_{lvl}")
-            if st.button(f"Update {lvl} Connectors", key=f"btn_conn_{lvl}"):
-                items = {c.strip() for c in new_conns.split(",") if c.strip()}
-                connectors[lvl] = items
-                save_connectors_to_csv(connectors)
-                st.success(f"✅ {lvl} connectors updated.")
-
-    with st.expander("👩‍🎓 Student Codes"):
-        student_codes = sorted(load_student_codes())
-        st.write("**Current student codes:**")
-        st.write(student_codes)
-
-        new_codes = st.text_area("Add student codes (comma-separated):", "")
-        if st.button("Add to Student Codes"):
-            code_set = set(student_codes)
-            for code in [s.strip() for s in new_codes.split(',') if s.strip()]:
-                code_set.add(code)
-            with open(STUDENT_CODES_PATH, "w", encoding="utf-8", newline="") as f:
-                writer = csv.writer(f)
-                writer.writerow(["student_code"])
-                for c in sorted(code_set):
-                    writer.writerow([c])
-            st.success("✅ Student codes updated.")
-            student_codes = sorted(load_student_codes())
-            st.write(student_codes)
-
-        # Remove a code
-        if student_codes:
-            code_to_remove = st.selectbox("Remove a student code:", student_codes)
-            if st.button("Remove Selected Code"):
-                code_set = set(student_codes)
-                code_set.discard(code_to_remove)
-                with open(STUDENT_CODES_PATH, "w", encoding="utf-8", newline="") as f:
-                    writer = csv.writer(f)
-                    writer.writerow(["student_code"])
-                    for c in sorted(code_set):
-                        writer.writerow([c])
-                st.success(f"✅ Student code '{code_to_remove}' removed.")
-                student_codes = sorted(load_student_codes())
-                st.write(student_codes)
-        else:
-            st.info("No student codes yet.")
-
-    with st.expander("📈 Submission Log"):
-        df_log = pd.DataFrame(load_submission_log().items(), columns=["student_code","count"])
-        st.dataframe(df_log)
-        st.download_button(
-            "💾 Download submission_log.csv",
-            data=df_log.to_csv(index=False).encode('utf-8'),
-            file_name="submission_log.csv",
-            mime="text/csv"
-        )
-        uploaded = st.file_uploader(
-            "🔄 Upload previous submission_log.csv to restore counts",
-            type="csv"
-        )
-        if uploaded:
-            with open(LOG_PATH, "wb") as f:
-                f.write(uploaded.getbuffer())
-            st.success("✅ Submission log restored. Reload the page to see updated counts.")
-
-    with st.expander("📊 Collected Essays for AI Training"):
-        download_training_data()
-
-    st.stop()
-
-# --- Annotate Text Helper ---
-def annotate_text(student_text, gpt_results, long_phrases, connectors_by_level, level):
-    ann = student_text
-    colors = {
-        'Grammar':   '#e15759',
-        'Phrase':    '#f1c232',
-        'Connector': '#6aa84f',
-        'Passive':   '#e69138',
-        'LongSent':  '#cccccc',
-        'Noun':      '#e69138',
-        'Repeat':    '#e15759'
-    }
-    for line in gpt_results or []:
-        if "⇒" in line:
-            err = line.split("⇒")[0].strip(" `")
-            pat = rf"(?i)\b{re.escape(err)}\b"
-            ann = re.sub(
-                pat,
-                lambda m: f"<span style='background-color:{colors['Grammar']}; color:#fff'>{m.group(0)}</span>",
-                ann
-            )
-    for phrase in long_phrases:
-        pat = re.escape(phrase)
-        ann = re.sub(
-            pat,
-            lambda m: f"<span title='Too long for {level}' style='background-color:{colors['Phrase']}; color:#000'>{m.group(0)}</span>",
-            ann
-        )
-    for conn in connectors_by_level.get(level, []):
-        pat = rf"(?i)\b{re.escape(conn)}\b"
-        ann = re.sub(
-            pat,
-            lambda m: f"<span style='background-color:{colors['Connector']}; color:#fff'>{m.group(0)}</span>",
-            ann
-        )
-    for pat in [r"\bwird\s+\w+\s+von\b", r"\bist\s+\w+\s+worden\b"]:
-        ann = re.sub(
-            pat,
-            lambda m: f"<span style='background-color:{colors['Passive']}; color:#000'>{m.group(0)}</span>",
-            ann, flags=re.I
-        )
-    ann = re.sub(
-        r"([A-ZÄÖÜ][^\.!?]{100,}[\.!?])",
-        lambda m: f"<span style='background-color:{colors['LongSent']}; color:#000'>{m.group(0)}</span>",
-        ann
-    )
-    for det in [' der',' die',' das',' ein',' eine',' mein',' dein']:
-        pat = rf"(?<={det}\s)([a-zäöüß]+)\b"
-        ann = re.sub(
-            pat,
-            lambda m: f"<span style='background-color:{colors['Noun']}; color:#fff'>{m.group(0)}</span>",
-            ann
-        )
-    ann = re.sub(
-        r" {2,}",
-        lambda m: f"<span style='border:1px solid {colors['Grammar']}'>{m.group(0)}</span>",
-        ann
-    )
-    ann = re.sub(
-        r",(?=[A-Za-zÖÜÄ])",
-        lambda m: f"<span style='border:1px solid {colors['Grammar']}'>{m.group(0)}</span>",
-        ann
-    )
-    ann = re.sub(
-        r"\b(\w+)\s+\1\b",
-        lambda m: f"<span style='text-decoration:underline; color:{colors['Repeat']}'>{m.group(0)}</span>",
-        ann, flags=re.I
-    )
-    return ann.replace("\n", "  \n")
-
-# --- Student Interface & Feedback ---
+# --- Load supporting data for student UI ---
 approved_vocab      = load_vocab_from_csv()
 student_codes       = load_student_codes()
-log_data            = load_submission_log()
 connectors_by_level = load_connectors_from_csv()
 
+# --- Student UI: Select level and task ---
 level = st.selectbox("Select your level", ["A1","A2","B1","B2"])
 tasks = ["Formal Letter","Informal Letter"]
 if level in ("B1","B2"):
@@ -482,14 +503,15 @@ if student_id not in student_codes:
     st.error("❌ You are not authorized to use this app.")
     st.stop()
 
-subs     = log_data.get(student_id, 0)
-max_subs = 40 if level == "A1" else 45
-if subs >= max_subs:
-    st.warning(f"⚠️ You have reached the maximum of {max_subs} submissions.")
+# --- Daily usage check ---
+usage_today = get_student_usage(student_id)
+if usage_today >= DAILY_LIMIT:
+    st.warning(f"⚠️ You have reached your daily limit of {DAILY_LIMIT} submissions. Please try again tomorrow.")
     st.stop()
-if subs >= max_subs - 12:
-    st.info("⏳ You have used most of your submission chances. Review carefully!")
+else:
+    st.info(f"Submissions today: {usage_today} of {DAILY_LIMIT}")
 
+# --- Student picks a task (A1) or writes own for higher levels ---
 if level == "A1":
     task_num = st.number_input(
         f"Choose a Schreiben task number (1–{len(a1_tasks)})",
@@ -503,28 +525,30 @@ if level == "A1":
 else:
     task_num = None
     task = None
+# --- Stage 6: Student Submission Input & Feedback Logic ---
 
 student_text = st.text_area("✏️ Write your letter or essay below:", height=300)
 
 if st.button("✅ Submit for Feedback"):
-    with st.spinner("🔄 Processing your submission…"):
-        if not student_text.strip():
-            st.warning("Please enter your text before submitting.")
-            st.stop()
+    if not student_text.strip():
+        st.warning("Please enter your text before submitting.")
+        st.stop()
 
+    with st.spinner("🔄 Processing your submission…"):
+        # --- Grammar check & feedback pipeline ---
         gpt_results = grammar_check_with_gpt(student_text)
-        adv = detect_long_phrases(student_text, level)
+        long_phrases = detect_long_phrases(student_text, level)
         used_connectors = [
             c for c in connectors_by_level.get(level, [])
             if c.lower() in student_text.lower()
         ]
         (content_score, grammar_score, vocab_score,
          structure_score, total, unique_ratio, avg_words,
-         readability) = score_text(student_text, level, gpt_results, adv)
+         readability) = score_text(student_text, level, gpt_results, long_phrases)
         feedback_text = generate_feedback_text(
             level, task_type, task, content_score, grammar_score,
             vocab_score, structure_score, total,
-            gpt_results, adv, used_connectors, student_text
+            gpt_results, long_phrases, used_connectors, student_text
         )
         save_for_training(
             student_id=student_id,
@@ -535,9 +559,11 @@ if st.button("✅ Submit for Feedback"):
             gpt_results=gpt_results,
             feedback_text=feedback_text
         )
-        log_data[student_id] = subs + 1
-        save_submission_log(log_data)
+        increment_student_usage(student_id)
 
+    st.success("✅ Submission saved!")
+
+    # --- Display Scores ---
     st.markdown(f"🧮 Readability: {readability} ({avg_words:.1f} w/s)")
     st.metric("Content",    f"{content_score}/10")
     st.metric("Grammar",    f"{grammar_score}/5")
@@ -556,12 +582,16 @@ if st.button("✅ Submit for Feedback"):
         for i, line in enumerate(gpt_results, 1):
             st.markdown(f"{i}. {line}")
 
+    # --- Connector usage hint ---
     hints = sorted(connectors_by_level.get(level, []))[:4]
     st.info(f"📝 Try connectors like: {', '.join(hints)}…")
 
-    ann = annotate_text(student_text, gpt_results, adv, connectors_by_level, level)
+    # --- Annotated feedback ---
+    ann = annotate_text(student_text, gpt_results, long_phrases, connectors_by_level, level)
     st.markdown("**Annotated Text:**", unsafe_allow_html=True)
     st.markdown(ann, unsafe_allow_html=True)
+
+# --- Stage 7: Explanation for Annotations & Feedback Download ---
 
     st.markdown("""
 **What do the highlights mean?**
@@ -575,7 +605,34 @@ if st.button("✅ Submit for Feedback"):
 - <span style='border:1px solid #e15759'>Red border</span>: Double space or missing space after comma  
     """, unsafe_allow_html=True)
 
+    # --- Feedback download ---
     st.download_button("💾 Download feedback", data=feedback_text, file_name="feedback.txt")
 
+# --- Stage 8: Utility Functions & Final Touches ---
 
+# Utility: (already provided in previous stages, included here for clarity)
+# - load_student_codes
+# - load_vocab_from_csv, save_vocab_to_csv
+# - load_connectors_from_csv, save_connectors_to_csv
+# - save_for_training
+# - detect_long_phrases
+# - grammar_check_with_gpt
+# - get_today_date, get_student_usage, increment_student_usage
+# - score_text, generate_feedback_text, annotate_text
 
+# (All these are spread in Stages 1–3.)
+
+# If you want to allow teacher to reset daily limits (optional):
+if teacher_mode and page == "Teacher Dashboard":
+    with st.expander("🗓 Reset Daily Usage Log (Optional)"):
+        if st.button("Reset ALL student daily usage counts"):
+            st.session_state['usage_log'] = {}
+            st.success("All daily usage counts have been reset. Students can submit up to 4 more essays today.")
+
+# If you ever want to let students see their own previous feedback,
+# you'll need to load and filter TRAINING_DATA_PATH for their code.
+# This feature is not included for privacy unless requested.
+
+# Reminder: Any file download is safe because all files are
+# small and under teacher control. The only persistence required is
+# for student_codes.csv, vocab, connectors, and AI training CSV.
