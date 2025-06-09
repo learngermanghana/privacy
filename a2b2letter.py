@@ -604,7 +604,10 @@ if st.button("✅ Submit for Feedback"):
     st.info(f"📝 Try connectors like: {', '.join(hints)}…")
 
     # --- Annotated feedback ---
-    ann = annotate_text(student_text, gpt_results, long_phrases, connectors_by_level, level)
+    if level in ("A1", "A2"):
+        ann = annotate_text(student_text, gpt_results, long_phrases, connectors_by_level, level)
+    else:
+        ann = annotate_text(student_text, gpt_results, [], connectors_by_level, level)
     st.markdown("**Annotated Text:**", unsafe_allow_html=True)
     st.markdown(ann, unsafe_allow_html=True)
 
