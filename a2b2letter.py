@@ -15,7 +15,7 @@ TRAINING_DATA_PATH   = "essay_training_data.csv"
 VOCAB_PATH           = "approved_vocab.csv"
 CONNECTOR_PATH       = "approved_connectors.csv"
 STUDENT_CODES_PATH   = "student_codes.csv"
-DAILY_LIMIT          = 4  # Student daily limit
+DAILY_LIMIT          = 5  # Student daily limit
 
 st.set_page_config(page_title="German Letter & Essay Checker", layout="wide")
 st.title("📝 German Letter & Essay Checker – Learn Language Education Academy")
