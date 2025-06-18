@@ -42,7 +42,7 @@ function_words = {
         "und","oder","aber","nicht","wie","wann","wo",
         "sein","haben","können","müssen","wollen","sollen",
         "bitte","viel","gut","sehr",
-        "wer","was","wann","wo","warum","wie","order"
+        "wer","was","wann","wo","warum","wie","oder"
     }
 }
 
