@@ -177,7 +177,6 @@ def grammar_check_with_gpt(text: str) -> list:
     )
     return response.choices[0].message.content.strip().splitlines()
 
-import pytz
 def get_today_date():
     """Returns today's date as string in Ghana time (YYYY-MM-DD)."""
     ghana_tz = pytz.timezone('Africa/Accra')
