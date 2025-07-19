@@ -4,8 +4,14 @@ from fpdf import FPDF
 import io
 from datetime import date
 
-st.set_page_config(page_title="Prep and Prime GH Inventory Dashboard", layout="wide")
-st.title("Prep and Prime GH Inventory Dashboard")
+COMPANY_NAME = "PrepnPrime Gh"
+COMPANY_PHONE = "0244680516"
+DASHBOARD_TAGLINE = "Your Beauty Inventory Partner"
+
+st.set_page_config(page_title=f"{COMPANY_NAME} Inventory Dashboard", layout="wide")
+st.title(f"{COMPANY_NAME} Inventory Dashboard")
+st.markdown(f"<span style='font-size:1.2em;color:#6366f1'><i>{DASHBOARD_TAGLINE}</i></span>", unsafe_allow_html=True)
+st.markdown(f"📞 **Contact:** {COMPANY_PHONE}")
 
 # Google Sheets public CSV export links
 INVENTORY_CSV = "https://docs.google.com/spreadsheets/d/1aiukBw220yTYGQjvrb1C0Tc_AsYM4p8EwJ70CWf1vhU/export?format=csv&id=1aiukBw220yTYGQjvrb1C0Tc_AsYM4p8EwJ70CWf1vhU&gid=0"
@@ -57,30 +63,39 @@ with tabs[2]:
     else:
         st.dataframe(customers)
 
-# Receipt Generator
+# --- Receipt Generator ---
 def generate_receipt_pdf(customer, items, total, receipt_no, date_str):
     pdf = FPDF()
     pdf.add_page()
-    pdf.set_font("Arial", size=12)
-    pdf.cell(200, 10, "Prep and Prime GH", ln=True, align="C")
+    pdf.set_font("Arial", size=14)
+    pdf.cell(200, 10, COMPANY_NAME, ln=True, align="C")
+    pdf.set_font("Arial", "I", 12)
+    pdf.cell(200, 10, DASHBOARD_TAGLINE, ln=True, align="C")
+    pdf.set_font("Arial", size=11)
+    pdf.cell(200, 8, f"Tel: {COMPANY_PHONE}", ln=True, align="C")
+    pdf.set_font("Arial", "B", 13)
     pdf.cell(200, 10, "RECEIPT", ln=True, align="C")
-    pdf.ln(10)
-    pdf.cell(100, 10, f"Date: {date_str}", ln=True)
-    pdf.cell(100, 10, f"Receipt No: {receipt_no}", ln=True)
-    pdf.cell(100, 10, f"Customer: {customer}", ln=True)
-    pdf.ln(10)
-    pdf.cell(70, 10, "Product", 1)
-    pdf.cell(30, 10, "Qty", 1)
-    pdf.cell(40, 10, "Price", 1)
-    pdf.cell(40, 10, "Total", 1)
+    pdf.set_font("Arial", size=12)
+    pdf.ln(8)
+    pdf.cell(100, 8, f"Date: {date_str}", ln=True)
+    pdf.cell(100, 8, f"Receipt No: {receipt_no}", ln=True)
+    pdf.cell(100, 8, f"Customer: {customer}", ln=True)
+    pdf.ln(8)
+    pdf.set_font("Arial", "B", 11)
+    pdf.cell(70, 8, "Product", 1)
+    pdf.cell(30, 8, "Qty", 1)
+    pdf.cell(40, 8, "Price", 1)
+    pdf.cell(40, 8, "Total", 1)
     pdf.ln()
+    pdf.set_font("Arial", size=11)
     for item in items:
-        pdf.cell(70, 10, str(item['product']), 1)
-        pdf.cell(30, 10, str(item['qty']), 1)
-        pdf.cell(40, 10, f"{item['price']:.2f}", 1)
-        pdf.cell(40, 10, f"{item['total']:.2f}", 1)
+        pdf.cell(70, 8, str(item['product']), 1)
+        pdf.cell(30, 8, str(item['qty']), 1)
+        pdf.cell(40, 8, f"{item['price']:.2f}", 1)
+        pdf.cell(40, 8, f"{item['total']:.2f}", 1)
         pdf.ln()
-    pdf.ln(5)
+    pdf.ln(3)
+    pdf.set_font("Arial", "B", 12)
     pdf.cell(140, 10, "Grand Total", 1)
     pdf.cell(40, 10, f"{total:.2f}", 1)
     out = io.BytesIO()
@@ -100,21 +115,45 @@ with tabs[3]:
             date_str = st.date_input("Date", value=date.today())
         with col2:
             product_selections = st.multiselect("Select Products", inventory_options)
+
         items = []
         total = 0
         for prod in product_selections:
-            prod_row = inventory[inventory['Product Name'] == prod].iloc[0]
-            qty = st.number_input(f"Quantity for {prod}", min_value=1, max_value=int(prod_row['Quantity']), step=1, key=prod)
-            price = prod_row['Price']
-            subtotal = qty * price
-            items.append({'product': prod, 'qty': qty, 'price': price, 'total': subtotal})
-            total += subtotal
+            prod_row = inventory[inventory['Product Name'] == prod]
+            if not prod_row.empty:
+                prod_row = prod_row.iloc[0]
+                # Safe quantity extraction
+                try:
+                    max_qty = int(prod_row['Quantity'])
+                    if max_qty < 1:
+                        max_qty = 1
+                except Exception:
+                    max_qty = 1000
+                qty = st.number_input(
+                    f"Quantity for {prod}",
+                    min_value=1,
+                    max_value=max_qty,
+                    step=1,
+                    key=prod
+                )
+                try:
+                    price = float(prod_row['Price'])
+                except Exception:
+                    price = 0.0
+                subtotal = qty * price
+                items.append({'product': prod, 'qty': qty, 'price': price, 'total': subtotal})
+                total += subtotal
 
         st.write(f"**Grand Total:** GHS {total:.2f}")
         submitted = st.form_submit_button("Generate Receipt PDF")
         if submitted and customer and items:
             pdf_bytes = generate_receipt_pdf(customer, items, total, receipt_no, str(date_str))
             st.success("Receipt generated!")
-            st.download_button("Download Receipt", data=pdf_bytes, file_name=f"{receipt_no}.pdf", mime="application/pdf")
+            st.download_button(
+                "Download Receipt",
+                data=pdf_bytes,
+                file_name=f"{receipt_no}.pdf",
+                mime="application/pdf"
+            )
 
 st.caption("All editing is managed in Google Sheets. This dashboard is for viewing, search, and receipt generation only.")
