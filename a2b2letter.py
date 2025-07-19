@@ -103,10 +103,17 @@ def generate_receipt_pdf(customer, items, total, receipt_no, date_str):
     return pdf_bytes
 
 
+# ... (rest of your code above)
+
 with tabs[3]:
     st.header("Receipt Generator")
     customer_options = customers["Name"].drop_duplicates().tolist()
     inventory_options = inventory["Product Name"].drop_duplicates().tolist()
+
+    # State variables for PDF
+    if "pdf_bytes" not in st.session_state:
+        st.session_state["pdf_bytes"] = None
+        st.session_state["file_name"] = ""
 
     with st.form("receipt_form"):
         col1, col2 = st.columns(2)
@@ -123,7 +130,6 @@ with tabs[3]:
             prod_row = inventory[inventory['Product Name'] == prod]
             if not prod_row.empty:
                 prod_row = prod_row.iloc[0]
-                # Safe quantity extraction
                 try:
                     max_qty = int(prod_row['Quantity'])
                     if max_qty < 1:
@@ -149,12 +155,15 @@ with tabs[3]:
         submitted = st.form_submit_button("Generate Receipt PDF")
         if submitted and customer and items:
             pdf_bytes = generate_receipt_pdf(customer, items, total, receipt_no, str(date_str))
-            st.success("Receipt generated!")
-            st.download_button(
-                "Download Receipt",
-                data=pdf_bytes,
-                file_name=f"{receipt_no}.pdf",
-                mime="application/pdf"
-            )
+            st.session_state["pdf_bytes"] = pdf_bytes
+            st.session_state["file_name"] = f"{receipt_no}.pdf"
+            st.success("Receipt generated! Scroll down to download.")
 
-st.caption("All editing is managed in Google Sheets. This dashboard is for viewing, search, and receipt generation only.")
+    # OUTSIDE the form: Show download button if PDF is ready
+    if st.session_state.get("pdf_bytes"):
+        st.download_button(
+            "Download Receipt",
+            data=st.session_state["pdf_bytes"],
+            file_name=st.session_state["file_name"],
+            mime="application/pdf"
+        )
