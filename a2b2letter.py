@@ -44,15 +44,55 @@ with tabs[0]:
     st.subheader("Low Stock Products")
     st.dataframe(inventory[inventory['Quantity'] < 5])
 
-# --- Inventory List ---
 with tabs[1]:
     st.header("Inventory List")
     search = st.text_input("Search by product, brand or category")
+    
+    # ---- Highlights/Notifications ----
+    # 1. Most Purchased
+    if 'Product Name' in sales.columns:
+        sales_count = sales.groupby('Product Name')['Quantity'].sum().sort_values(ascending=False)
+        most_purchased = sales_count.head(1)
+        if not most_purchased.empty:
+            st.success(f"🔥 **Best-seller:** {most_purchased.index[0]} (sold {int(most_purchased.values[0])} units)")
+    # 2. Running out of stock
+    running_low = inventory[inventory['Quantity'] < 5]
+    if not running_low.empty:
+        names = ', '.join(running_low['Product Name'].astype(str).tolist())
+        st.warning(f"⚠️ **Running low:** {names}")
+    # 3. Out of stock
+    out_stock = inventory[inventory['Quantity'] <= 0]
+    if not out_stock.empty:
+        names = ', '.join(out_stock['Product Name'].astype(str).tolist())
+        st.error(f"❌ **Out of stock:** {names}")
+
+    # ---- Inventory Table ----
     if search:
         mask = inventory.apply(lambda row: search.lower() in str(row).lower(), axis=1)
-        st.dataframe(inventory[mask])
+        show_table = inventory[mask]
     else:
-        st.dataframe(inventory)
+        show_table = inventory
+
+    # Optional: highlight low stock rows (Streamlit native highlight)
+    def highlight_low(val):
+        color = ""
+        try:
+            if int(val) < 1:
+                color = "background-color: #ffe0e0"  # Red tint for out of stock
+            elif int(val) < 5:
+                color = "background-color: #fff7d9"  # Yellow tint for low stock
+        except Exception:
+            pass
+        return color
+
+    if 'Quantity' in show_table.columns:
+        st.dataframe(
+            show_table.style.applymap(highlight_low, subset=['Quantity']),
+            use_container_width=True
+        )
+    else:
+        st.dataframe(show_table)
+
 
 # --- All Customers ---
 with tabs[2]:
