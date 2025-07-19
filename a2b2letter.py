@@ -30,7 +30,8 @@ tabs = st.tabs([
     "Dashboard",
     "Inventory List",
     "All Customers",
-    "Receipt Generator"
+    "Receipt Generator",
+    "Sales Report"
 ])
 
 # --- Dashboard ---
