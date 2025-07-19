@@ -117,7 +117,7 @@ with tabs[3]:
             receipt_no = st.text_input("Receipt No", f"REC-{date.today().strftime('%Y%m%d')}-001")
             date_str = st.date_input("Date", value=date.today())
         with col2:
-            # Product Search Box
+            # Product search/filter
             product_search = st.text_input("Search Product (optional)", key="product_search")
             if product_search:
                 filtered_options = [
@@ -172,9 +172,11 @@ with tabs[3]:
             pdf_bytes = generate_receipt_pdf(customer, items, total, receipt_no, str(date_str))
             st.session_state["pdf_bytes"] = pdf_bytes
             st.session_state["file_name"] = f"{receipt_no}.pdf"
+            st.session_state["customer"] = customer  # store for WhatsApp
+            st.session_state["date_str"] = str(date_str)
             st.success("Receipt generated! Scroll down to download.")
 
-    # OUTSIDE form: Download button
+    # OUTSIDE form: Download and WhatsApp button
     if st.session_state.get("pdf_bytes"):
         st.download_button(
             "Download Receipt",
@@ -183,6 +185,47 @@ with tabs[3]:
             mime="application/pdf"
         )
 
+        # WhatsApp share button with phone formatting
+        def format_gh_number(num):
+            # Remove all spaces and plus signs
+            num = str(num).replace(" ", "").replace("+", "")
+            if num.startswith("233") and len(num) == 12:
+                return num
+            elif num.startswith("0") and len(num) == 10:
+                return "233" + num[1:]
+            elif len(num) == 9:
+                return "233" + num
+            elif len(num) == 10:
+                return "233" + num[-9:]
+            else:
+                return num
+
+        customer = st.session_state.get("customer", "")
+        phone_number = ""
+        whatsapp_message = f"Hello {customer}, your receipt from {COMPANY_NAME} dated {st.session_state.get('date_str','')} is ready."
+
+        customer_row = customers[customers["Name"] == customer]
+        # Try 'Phone Number', then 'Phone'
+        colnames = [c.lower() for c in customers.columns]
+        phone_col = None
+        if "phone number" in colnames:
+            phone_col = customers.columns[colnames.index("phone number")]
+        elif "phone" in colnames:
+            phone_col = customers.columns[colnames.index("phone")]
+        if not customer_row.empty and phone_col:
+            raw_number = customer_row.iloc[0][phone_col]
+            formatted_number = format_gh_number(raw_number)
+            if formatted_number and formatted_number != "nan" and len(formatted_number) >= 12:
+                wa_link = f"https://wa.me/{formatted_number}?text={whatsapp_message}"
+                st.markdown(f"""
+                <a href="{wa_link}" target="_blank" style="display:inline-block;padding:10px 20px;background-color:#25D366;color:white;border-radius:5px;text-decoration:none;font-weight:bold;">
+                📲 Share via WhatsApp
+                </a>
+                """, unsafe_allow_html=True)
+            else:
+                st.info("No valid phone number found for this customer. Please add one to share via WhatsApp.")
+        else:
+            st.info("No phone number found for this customer. Please add one to share via WhatsApp.")
 
 
 with tabs[4]:
