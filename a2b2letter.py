@@ -64,7 +64,7 @@ with tabs[2]:
         st.dataframe(customers)
 
 # --- Receipt Generator ---
-def generate_receipt_pdf(customer, items, total, receipt_no, date_str):
+def generate_sales_pdf(sales_for_day, report_date):
     pdf = FPDF()
     pdf.add_page()
     pdf.set_font("Arial", size=14)
@@ -74,33 +74,35 @@ def generate_receipt_pdf(customer, items, total, receipt_no, date_str):
     pdf.set_font("Arial", size=11)
     pdf.cell(200, 8, f"Tel: {COMPANY_PHONE}", ln=True, align="C")
     pdf.set_font("Arial", "B", 13)
-    pdf.cell(200, 10, "RECEIPT", ln=True, align="C")
-    pdf.set_font("Arial", size=12)
-    pdf.ln(8)
-    pdf.cell(100, 8, f"Date: {date_str}", ln=True)
-    pdf.cell(100, 8, f"Receipt No: {receipt_no}", ln=True)
-    pdf.cell(100, 8, f"Customer: {customer}", ln=True)
-    pdf.ln(8)
+    pdf.cell(200, 10, f"Sales Report: {report_date}", ln=True, align="C")
+    pdf.ln(5)
     pdf.set_font("Arial", "B", 11)
-    pdf.cell(70, 8, "Product", 1)
-    pdf.cell(30, 8, "Qty", 1)
-    pdf.cell(40, 8, "Price", 1)
-    pdf.cell(40, 8, "Total", 1)
+    pdf.cell(35, 8, "Receipt No", 1)
+    pdf.cell(35, 8, "Customer", 1)
+    pdf.cell(35, 8, "Product", 1)
+    pdf.cell(20, 8, "Qty", 1)
+    pdf.cell(35, 8, "Unit Price", 1)
+    pdf.cell(30, 8, "Total", 1)
     pdf.ln()
-    pdf.set_font("Arial", size=11)
-    for item in items:
-        pdf.cell(70, 8, str(item['product']), 1)
-        pdf.cell(30, 8, str(item['qty']), 1)
-        pdf.cell(40, 8, f"{item['price']:.2f}", 1)
-        pdf.cell(40, 8, f"{item['total']:.2f}", 1)
+    pdf.set_font("Arial", size=10)
+    total_sales = 0
+    for idx, row in sales_for_day.iterrows():
+        pdf.cell(35, 8, str(row['Receipt No']), 1)
+        pdf.cell(35, 8, str(row['Customer Name']), 1)
+        pdf.cell(35, 8, str(row['Product Name']), 1)
+        pdf.cell(20, 8, str(row['Quantity']), 1)
+        pdf.cell(35, 8, f"{row['Unit Price']:.2f}", 1)
+        pdf.cell(30, 8, f"{row['Total']:.2f}", 1)
         pdf.ln()
-    pdf.ln(3)
+        try:
+            total_sales += float(row['Total'])
+        except:
+            pass
+    pdf.ln(5)
     pdf.set_font("Arial", "B", 12)
-    pdf.cell(140, 10, "Grand Total", 1)
-    pdf.cell(40, 10, f"{total:.2f}", 1)
-    # Return as bytes for Streamlit download button
-    pdf_bytes = pdf.output(dest='S').encode('latin1')
-    return pdf_bytes
+    pdf.cell(160, 10, "Total Sales (GHS)", 1)
+    pdf.cell(30, 10, f"{total_sales:.2f}", 1)
+    return pdf.output(dest='S').encode('latin1')
 
 
 # ... (rest of your code above)
