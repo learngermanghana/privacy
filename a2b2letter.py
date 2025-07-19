@@ -117,7 +117,20 @@ with tabs[3]:
             receipt_no = st.text_input("Receipt No", f"REC-{date.today().strftime('%Y%m%d')}-001")
             date_str = st.date_input("Date", value=date.today())
         with col2:
-            product_selections = st.multiselect("Select Products", inventory_options)
+            # Product Search Box
+            product_search = st.text_input("Search Product (optional)", key="product_search")
+            if product_search:
+                filtered_options = [
+                    p for p in inventory_options if product_search.lower() in p.lower()
+                ]
+            else:
+                filtered_options = inventory_options
+
+            product_selections = st.multiselect(
+                "Select Products",
+                options=filtered_options,
+                key="product_selections"
+            )
 
         items = []
         total = 0
@@ -170,7 +183,6 @@ with tabs[3]:
             mime="application/pdf"
         )
 
-st.caption("All editing is managed in Google Sheets. This dashboard is for viewing, search, and receipt generation only.")
 
 
 with tabs[4]:
