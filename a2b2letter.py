@@ -98,9 +98,10 @@ def generate_receipt_pdf(customer, items, total, receipt_no, date_str):
     pdf.set_font("Arial", "B", 12)
     pdf.cell(140, 10, "Grand Total", 1)
     pdf.cell(40, 10, f"{total:.2f}", 1)
-    out = io.BytesIO()
-    pdf.output(out)
-    return out.getvalue()
+    # Return as bytes for Streamlit download button
+    pdf_bytes = pdf.output(dest='S').encode('latin1')
+    return pdf_bytes
+
 
 with tabs[3]:
     st.header("Receipt Generator")
