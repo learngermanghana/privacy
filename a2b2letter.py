@@ -1,9 +1,9 @@
 import streamlit as st
 import pandas as pd
 from fpdf import FPDF
-import io
 from datetime import date
 
+# --- Company Branding ---
 COMPANY_NAME = "PrepnPrime Gh"
 COMPANY_PHONE = "0244680516"
 DASHBOARD_TAGLINE = "Your Beauty Inventory Partner"
@@ -13,7 +13,7 @@ st.title(f"{COMPANY_NAME} Inventory Dashboard")
 st.markdown(f"<span style='font-size:1.2em;color:#6366f1'><i>{DASHBOARD_TAGLINE}</i></span>", unsafe_allow_html=True)
 st.markdown(f"📞 **Contact:** {COMPANY_PHONE}")
 
-# Google Sheets public CSV export links
+# --- Google Sheets public CSV export links ---
 INVENTORY_CSV = "https://docs.google.com/spreadsheets/d/1aiukBw220yTYGQjvrb1C0Tc_AsYM4p8EwJ70CWf1vhU/export?format=csv&id=1aiukBw220yTYGQjvrb1C0Tc_AsYM4p8EwJ70CWf1vhU&gid=0"
 CUSTOMERS_CSV = "https://docs.google.com/spreadsheets/d/1by2BJB3H40vlggY31TNM-FS7H5TO5z9rQHrDE6lXPX0/export?format=csv&id=1by2BJB3H40vlggY31TNM-FS7H5TO5z9rQHrDE6lXPX0&gid=0"
 SALES_CSV = "https://docs.google.com/spreadsheets/d/15qSz8hweToyDIeulHBTUN5dVBNw6tZojC9CxupTgWRk/export?format=csv&id=15qSz8hweToyDIeulHBTUN5dVBNw6tZojC9CxupTgWRk&gid=0"
@@ -30,11 +30,10 @@ tabs = st.tabs([
     "Dashboard",
     "Inventory List",
     "All Customers",
-    "Receipt Generator",
-    "Sales Report" 
+    "Receipt Generator"
 ])
 
-# Dashboard
+# --- Dashboard ---
 with tabs[0]:
     st.header("Dashboard")
     st.metric("Total Products", len(inventory))
@@ -44,7 +43,7 @@ with tabs[0]:
     st.subheader("Low Stock Products")
     st.dataframe(inventory[inventory['Quantity'] < 5])
 
-# Inventory List
+# --- Inventory List ---
 with tabs[1]:
     st.header("Inventory List")
     search = st.text_input("Search by product, brand or category")
@@ -54,7 +53,7 @@ with tabs[1]:
     else:
         st.dataframe(inventory)
 
-# All Customers
+# --- All Customers ---
 with tabs[2]:
     st.header("All Customers")
     cust_search = st.text_input("Search by customer name, phone, or location")
@@ -65,7 +64,7 @@ with tabs[2]:
         st.dataframe(customers)
 
 # --- Receipt Generator ---
-def generate_sales_pdf(sales_for_day, report_date):
+def generate_receipt_pdf(customer, items, total, receipt_no, date_str):
     pdf = FPDF()
     pdf.add_page()
     pdf.set_font("Arial", size=14)
@@ -75,45 +74,37 @@ def generate_sales_pdf(sales_for_day, report_date):
     pdf.set_font("Arial", size=11)
     pdf.cell(200, 8, f"Tel: {COMPANY_PHONE}", ln=True, align="C")
     pdf.set_font("Arial", "B", 13)
-    pdf.cell(200, 10, f"Sales Report: {report_date}", ln=True, align="C")
-    pdf.ln(5)
+    pdf.cell(200, 10, "RECEIPT", ln=True, align="C")
+    pdf.set_font("Arial", size=12)
+    pdf.ln(8)
+    pdf.cell(100, 8, f"Date: {date_str}", ln=True)
+    pdf.cell(100, 8, f"Receipt No: {receipt_no}", ln=True)
+    pdf.cell(100, 8, f"Customer: {customer}", ln=True)
+    pdf.ln(8)
     pdf.set_font("Arial", "B", 11)
-    pdf.cell(35, 8, "Receipt No", 1)
-    pdf.cell(35, 8, "Customer", 1)
-    pdf.cell(35, 8, "Product", 1)
-    pdf.cell(20, 8, "Qty", 1)
-    pdf.cell(35, 8, "Unit Price", 1)
-    pdf.cell(30, 8, "Total", 1)
+    pdf.cell(70, 8, "Product", 1)
+    pdf.cell(30, 8, "Qty", 1)
+    pdf.cell(40, 8, "Price", 1)
+    pdf.cell(40, 8, "Total", 1)
     pdf.ln()
-    pdf.set_font("Arial", size=10)
-    total_sales = 0
-    for idx, row in sales_for_day.iterrows():
-        pdf.cell(35, 8, str(row['Receipt No']), 1)
-        pdf.cell(35, 8, str(row['Customer Name']), 1)
-        pdf.cell(35, 8, str(row['Product Name']), 1)
-        pdf.cell(20, 8, str(row['Quantity']), 1)
-        pdf.cell(35, 8, f"{row['Unit Price']:.2f}", 1)
-        pdf.cell(30, 8, f"{row['Total']:.2f}", 1)
+    pdf.set_font("Arial", size=11)
+    for item in items:
+        pdf.cell(70, 8, str(item['product']), 1)
+        pdf.cell(30, 8, str(item['qty']), 1)
+        pdf.cell(40, 8, f"{item['price']:.2f}", 1)
+        pdf.cell(40, 8, f"{item['total']:.2f}", 1)
         pdf.ln()
-        try:
-            total_sales += float(row['Total'])
-        except:
-            pass
-    pdf.ln(5)
+    pdf.ln(3)
     pdf.set_font("Arial", "B", 12)
-    pdf.cell(160, 10, "Total Sales (GHS)", 1)
-    pdf.cell(30, 10, f"{total_sales:.2f}", 1)
+    pdf.cell(140, 10, "Grand Total", 1)
+    pdf.cell(40, 10, f"{total:.2f}", 1)
     return pdf.output(dest='S').encode('latin1')
-
-
-# ... (rest of your code above)
 
 with tabs[3]:
     st.header("Receipt Generator")
     customer_options = customers["Name"].drop_duplicates().tolist()
     inventory_options = inventory["Product Name"].drop_duplicates().tolist()
 
-    # State variables for PDF
     if "pdf_bytes" not in st.session_state:
         st.session_state["pdf_bytes"] = None
         st.session_state["file_name"] = ""
@@ -154,7 +145,14 @@ with tabs[3]:
                 items.append({'product': prod, 'qty': qty, 'price': price, 'total': subtotal})
                 total += subtotal
 
+        # --- Cart preview table ---
+        if items:
+            st.write("### Preview Receipt Items")
+            cart_df = pd.DataFrame(items)
+            cart_df = cart_df.rename(columns={'product': 'Product', 'qty': 'Qty', 'price': 'Unit Price', 'total': 'Total'})
+            st.dataframe(cart_df)
         st.write(f"**Grand Total:** GHS {total:.2f}")
+
         submitted = st.form_submit_button("Generate Receipt PDF")
         if submitted and customer and items:
             pdf_bytes = generate_receipt_pdf(customer, items, total, receipt_no, str(date_str))
@@ -162,7 +160,7 @@ with tabs[3]:
             st.session_state["file_name"] = f"{receipt_no}.pdf"
             st.success("Receipt generated! Scroll down to download.")
 
-    # OUTSIDE the form: Show download button if PDF is ready
+    # OUTSIDE form: Download button
     if st.session_state.get("pdf_bytes"):
         st.download_button(
             "Download Receipt",
@@ -170,6 +168,9 @@ with tabs[3]:
             file_name=st.session_state["file_name"],
             mime="application/pdf"
         )
+
+st.caption("All editing is managed in Google Sheets. This dashboard is for viewing, search, and receipt generation only.")
+
 
 with tabs[4]:
     st.header("Daily Sales PDF Report")
