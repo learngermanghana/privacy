@@ -30,7 +30,8 @@ tabs = st.tabs([
     "Dashboard",
     "Inventory List",
     "All Customers",
-    "Receipt Generator"
+    "Receipt Generator",
+    "Sales Report" 
 ])
 
 # Dashboard
@@ -169,3 +170,23 @@ with tabs[3]:
             file_name=st.session_state["file_name"],
             mime="application/pdf"
         )
+
+with tabs[4]:
+    st.header("Daily Sales PDF Report")
+    report_date = st.date_input("Select date for sales report", value=date.today())
+    sales_for_day = sales[sales['Date'] == str(report_date)]
+    st.write(f"Total sales records: {len(sales_for_day)}")
+    st.dataframe(sales_for_day)
+    
+    if len(sales_for_day) > 0:
+        if st.button("Generate Sales PDF Report"):
+            pdf_bytes = generate_sales_pdf(sales_for_day, str(report_date))
+            st.download_button(
+                "Download Sales Report",
+                data=pdf_bytes,
+                file_name=f"Sales_Report_{report_date}.pdf",
+                mime="application/pdf"
+            )
+    else:
+        st.info("No sales found for this date.")
+
