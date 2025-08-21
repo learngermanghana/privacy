@@ -5,6 +5,51 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Falowen — Learn Language Education Academy | Register • Payments • Privacy • Terms</title>
   <meta name="description" content="Register for Falowen classes by Learn Language Education Academy and read the Payment Agreement, Privacy Policy, and Terms of Service. Last updated July 27, 2025.">
+  <meta name="theme-color" content="#1d4ed8">
+
+  <!-- Canonical + Social (OG/Twitter) — update domain if needed -->
+  <link rel="canonical" href="https://privacy.falowen.app/">
+  <meta property="og:title" content="Falowen — Learn Language Education Academy">
+  <meta property="og:description" content="Register for Falowen classes and read Payments, Privacy & Terms.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://privacy.falowen.app/">
+  <meta property="og:image" content="https://privacy.falowen.app/og-image.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:site_name" content="Falowen">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Falowen — Learn Language Education Academy">
+  <meta name="twitter:description" content="Register for Falowen classes and read Payments, Privacy & Terms.">
+  <meta name="twitter:image" content="https://privacy.falowen.app/og-image.png">
+
+  <!-- JSON-LD: Organization & FAQ -->
+  <script type="application/ld+json">
+  {
+    "@context":"https://schema.org",
+    "@type":"Organization",
+    "name":"Learn Language Education Academy",
+    "url":"https://www.falowen.com",
+    "email":"learngermanghana@gmail.com",
+    "brand":{"@type":"Brand","name":"Falowen"},
+    "logo":"https://privacy.falowen.app/og-image.png",
+    "sameAs":["https://www.learngermanghana.com"]
+  }
+  </script>
+  <script type="application/ld+json">
+  {
+    "@context":"https://schema.org",
+    "@type":"FAQPage",
+    "mainEntity":[
+      {"@type":"Question","name":"When do I receive my Student Code?",
+       "acceptedAnswer":{"@type":"Answer","text":"After payment is confirmed, you will receive an email with your Student Code and next steps. Check spam/junk if you don’t see it."}},
+      {"@type":"Question","name":"How do I create my Falowen account?",
+       "acceptedAnswer":{"@type":"Answer","text":"Go to www.falowen.com → open the Login area → click Sign up. Use your Student Code and your email, then create a unique password."}},
+      {"@type":"Question","name":"What if the registration email doesn’t arrive?",
+       "acceptedAnswer":{"@type":"Answer","text":"Please check spam/junk. If it’s not there, contact learngermanghana@gmail.com or chat on WhatsApp using the link on this page."}}
+    ]
+  }
+  </script>
+
   <!-- Simple branded favicon (inline SVG) -->
   <link rel="icon" href='data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128"><rect width="100%" height="100%" rx="24" ry="24" fill="%231d4ed8"/><text x="50%" y="58%" font-size="72" text-anchor="middle" font-family="Segoe UI, Roboto, Arial" fill="white">F</text></svg>'>
 
@@ -74,6 +119,13 @@
     h3 { margin-top:22px; }
     iframe { width:100%; height:80vh; border:0; border-radius:12px; box-shadow:0 1px 0 rgba(15,23,42,.06); }
     footer { border-top:1px solid var(--line); margin-top:36px; }
+
+    /* Print-friendly legal */
+    @media print{
+      nav.toc, .cta, .ribbon, .hero { display:none !important; }
+      .card{ border:0; box-shadow:none; }
+      a[href]:after{ content:" (" attr(href) ")"; font-size:.85em; }
+    }
   </style>
 </head>
 <body>
@@ -125,7 +177,7 @@
     <section id="register">
       <h2>Register Now</h2>
 
-      <!-- NEW: Post-registration instructions -->
+      <!-- Post-registration instructions -->
       <div class="card">
         <h3>After You Register — What Happens Next</h3>
         <ol>
