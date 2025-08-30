@@ -21,6 +21,7 @@
   <meta name="twitter:description" content="Register for Falowen classes and read Payments, Privacy & Terms.">
   <meta name="twitter:image" content="https://register.falowen.app/og-image.png">
 
+  <!-- Schema: Organization -->
   <script type="application/ld+json">
   {
     "@context":"https://schema.org",
@@ -33,6 +34,7 @@
     "sameAs":["https://www.learngermanghana.com"]
   }
   </script>
+  <!-- Schema: EducationalOrganization (SEO boost) -->
   <script type="application/ld+json">
   {
     "@context":"https://schema.org",
@@ -99,7 +101,7 @@
     iframe { width:100%; height:80vh; border:0; border-radius:12px; box-shadow:0 1px 0 rgba(15,23,42,.06); }
     footer { border-top:1px solid var(--line); margin-top:36px; }
     .tabs { display:flex; gap:20px; margin-top:20px; border-bottom:2px solid var(--line); }
-    .tabs a { text-decoration:none; padding:10px 20px; background-color:var(--surface); border-radius:8px 8px 0 0; border:1px solid var(--line); }
+    .tabs a { text-decoration:none; padding:10px 20px; background-color:var(--surface); border-radius:8px 8px 0 0; border:1px solid var(--line); cursor:pointer; }
     .tabs a.active { background-color: var(--brand); color: white; }
     .print{ display:inline-block; margin-left:10px; padding:6px 10px; border-radius:8px; border:1px solid var(--line); background:var(--surface); cursor:pointer; }
     .print:hover{ border-color: var(--brand2); color: var(--brand2); }
@@ -128,38 +130,15 @@
       <div class="hero">
         <h1>Registration & Legal</h1>
         <div class="meta">Last updated: July 27, 2025</div>
-        <nav class="toc" aria-label="Section navigation">
-          <a href="#about-us" class="active">About Us</a>
-          <a href="#register">Register</a>
-          <a href="#payment-agreement">Payment Agreement</a>
-          <a href="#privacy-policy">Privacy Policy</a>
-          <a href="#terms-of-service">Terms of Service</a>
-          <a href="#contact">Contact</a>
+        <nav class="tabs">
+          <a href="#register" class="active">Register</a>
+          <a href="#about-us">About Us</a>
         </nav>
       </div>
     </div>
   </header>
   <main>
-    <section id="about-us" class="tabs">
-      <h2>About Us</h2>
-      <div class="card">
-        <p><strong>Falowen</strong> is a German learning platform by <strong>Learn Language Education Academy (LLEA)</strong> in Ghana. We help learners from <strong>A1 to B2</strong> build real-world skills through structured practice, including preparation for internationally recognized proficiency levels, such as **B2**.</p>
-      </div>
-      <div class="card">
-        <h3>Our Story</h3>
-        <p><strong>Founder:</strong> Felix Asadu. Credentials: International Management (IU International University, Germany), TEFL, English for Business (YALI), Goethe B2. Felix started with a few online lessons, refined a practical method (simple explanations, targeted drills, steady feedback), and grew it into an academy and an app used by learners in Ghana and beyond.</p>
-      </div>
-      <div class="card">
-        <h3>Mission & Location</h3>
-        <ul>
-          <li><strong>Mission:</strong> Deliver affordable, effective German education and help students use German confidently in real life.</li>
-          <li><strong>Based:</strong> Ghana, West Africa. We offer in-person classes locally and online programs worldwide.</li>
-          <li><strong>Contact:</strong> <a href="https://api.whatsapp.com/message/EYMY3524WL6IC1?autoload=1&amp;app_absent=0" target="_blank" rel="noopener">Message us on WhatsApp</a></li>
-        </ul>
-      </div>
-    </section>
-
-    <section id="register">
+    <section id="register" class="card">
       <h2>Register Now</h2>
       <div class="card">
         <h3>After You Register: What Happens Next</h3>
@@ -184,147 +163,22 @@
       </div>
     </section>
 
-    <section id="payment-agreement">
-      <h2>Payment Agreement</h2><button class="print" onclick="window.print()" aria-label="Print Payment Agreement">Print</button>
+    <section id="about-us" class="card">
+      <h2>About Us</h2>
       <div class="card">
-        <p>This Payment Agreement is entered into on <strong>[DATE]</strong> for <strong>[CLASS]</strong> students of Learn Language Education Academy and Felix Asadu (“Teacher”).</p>
-        <h3>Terms of Payment</h3>
-        <ol>
-          <li><strong>Payment Amount:</strong> The student agrees to pay the teacher a total of <strong>[AMOUNT]</strong> GHS for the course.</li>
-          <li><strong>Payment Schedule:</strong> Payment may be made in full or in two installments:
-            first installment of <strong>GHS [FIRST_INSTALLMENT]</strong>, and the remaining balance due
-            <strong>one month</strong> after the first payment.</li>
-          <li><strong>Late Payments:</strong> In the event of late payment, the school may revoke access to all learning platforms.
-            <strong>No refund</strong> will be made.</li>
-          <li><strong>Refunds:</strong> Once a deposit is made and a receipt is issued, <strong>no refunds</strong> will be provided
-            <em>(except where required by law)</em>.</li>
-        </ol>
-        <h3>Cancellation & Refund Policy</h3>
-        <ol>
-          <li>If the teacher cancels a lesson, it will be rescheduled.</li>
-        </ol>
-        <h3>Miscellaneous Terms</h3>
-        <ol>
-          <li><strong>Attendance:</strong> The student agrees to attend lessons punctually.</li>
-          <li><strong>Communication:</strong> Both parties agree to communicate changes promptly.</li>
-          <li><strong>Termination:</strong> Either party may terminate this Agreement with written notice if the other party breaches any material term.</li>
-        </ol>
-        <h3>Payment Methods</h3>
-        <ul>
-          <li><strong>Mobile Money:</strong> Number: <strong>0245022743</strong> · Name: <strong>Felix Asadu</strong></li>
-          <li><strong>AccessBank (Cedis):</strong> Account Number: <strong>1050000008017</strong> · Name: <strong>Learn Language Education Academy</strong></li>
-        </ul>
-        <h3>Class Level & Start Date</h3>
-        <p>Fees and dates vary by level and cohort. It is assumed that students have confirmed their level and start date via our
-          <a href="https://www.learngermanghana.com/upcoming-classes" target="_blank" rel="noopener">Upcoming Classes</a> page before payment.</p>
-        <p class="small"><em>By making any payment, you acknowledge and agree to the terms of this Payment Agreement.</em></p>
+        <p><strong>Falowen</strong> is a German learning platform by <strong>Learn Language Education Academy (LLEA)</strong> in Ghana. We help learners from <strong>A1 to B2</strong> build real-world skills through structured practice, including preparation for internationally recognized proficiency levels, such as **B2**.</p>
       </div>
-    </section>
-
-    <section id="privacy-policy">
-      <h2>Privacy Policy</h2>
       <div class="card">
-        <h3>Who We Are & Scope</h3>
-        <p>We are committed to protecting your privacy. This Privacy Policy explains how we collect, use, disclose, and safeguard information when you use our website or app, including related tools and communications.</p>
-        <p><strong>Data controller:</strong> Learn Language Education Academy (Ghana).</p>
-        <h3>Information We Collect</h3>
-        <ul>
-          <li><strong>Account Information:</strong> Name, email address, student code, and password.</li>
-          <li><strong>Usage Data:</strong> Learning progress, scores, submissions, feedback, and in-app interactions.</li>
-          <li><strong>Device & Log Data:</strong> IP address, device type, OS, browser, timestamps, diagnostic logs.</li>
-          <li><strong>Cookies & Local Storage:</strong> Used for sessions, preferences, and performance (see “Cookies”).</li>
-        </ul>
-        <h3>How We Use Your Information</h3>
-        <ul>
-          <li>Provide and maintain language-learning features and core functionality.</li>
-          <li>Track progress, personalize content, and deliver feedback.</li>
-          <li>Communicate about accounts, progress, updates, and support.</li>
-          <li>Monitor, secure, and improve the Service.</li>
-          <li>Comply with legal obligations and enforce our Terms.</li>
-        </ul>
-        <h3>Legal Bases (EEA/UK)</h3>
-        <p>Where the GDPR applies, we rely on <strong>contract</strong>, <strong>legitimate interests</strong> (e.g., security, optimization),
-          and <strong>consent</strong> (e.g., optional cookies/communications where required). You may withdraw consent at any time.</p>
-        <h3>How We Share Your Information</h3>
-        <ul>
-          <li><strong>No sale of data:</strong> We do not sell personal information.</li>
-          <li><strong>Teachers/School Staff:</strong> Data may be visible to teachers or authorized staff to run classes and assess progress.</li>
-          <li><strong>Service Providers (Processors):</strong> Trusted vendors help operate the Service (e.g., Google/Firebase/Google Cloud, Streamlit Cloud, OpenAI for AI features). They are bound to protect data and not use it for advertising.</li>
-          <li><strong>Legal/Compliance:</strong> We may disclose information to comply with laws or protect rights.</li>
-        </ul>
-        <h3>International Data Transfers</h3>
-        <p>Your data may be processed in countries other than your own. Where required, we use safeguards (e.g., contractual clauses) to protect it.</p>
-        <h3>Data Retention</h3>
-        <p>We retain personal data while your account is active or as needed to provide the Service, meet legal duties, resolve disputes, and enforce agreements. We may retain de-identified or aggregated data for analytics.</p>
-        <h3>Security</h3>
-        <p>We use reasonable technical and organizational measures to protect personal data (e.g., encryption in transit, access controls, periodic reviews). No method is 100% secure.</p>
-        <h3>Your Rights</h3>
-        <p>Depending on your location (e.g., Ghana Data Protection Act, 2012 (Act 843) and/or GDPR), you may request access, correction, deletion, export, or restriction/objection.
-          Contact <a href="mailto:learngermanghana@gmail.com">learngermanghana@gmail.com</a>.</p>
-        <h3>Children’s Privacy</h3>
-        <p>The Service is used by students under school/guardian guidance where required. We do not knowingly collect children’s data without required consent. If you believe a child provided data without required consent, contact us to delete it.</p>
-        <h3>Cookies</h3>
-        <p>We use cookies and similar technologies (including local storage) to keep you signed in, remember preferences, and improve performance.</p>
-        <ul>
-          <li><strong>Essential cookies:</strong> Required for core functionality.</li>
-          <li><strong>Preference/Performance cookies:</strong> Improve features and remember settings.</li>
-        </ul>
-        <p>You can manage cookies in your browser; disabling some cookies may limit functionality.</p>
-        <h3>Communications</h3>
-        <p>We may send service-related messages (e.g., password resets, critical updates). Where required, we seek consent for non-essential communications; you can opt out anytime.</p>
-        <h3>Third-Party Links</h3>
-        <p>Third-party sites are governed by their own policies.</p>
-        <h3>Changes to This Policy</h3>
-        <p>We may update this Privacy Policy. Material changes will be posted here with a new “Last updated” date. Continued use after changes take effect means you accept the update.</p>
-        <h3 id="privacy-contact">Contact</h3>
-        <p>Questions or requests: <a href="mailto:learngermanghana@gmail.com">learngermanghana@gmail.com</a>.</p>
-        <p class="small"><em>This Privacy Policy is for information only and is not legal advice.</em></p>
+        <h3>Our Story</h3>
+        <p><strong>Founder:</strong> Felix Asadu. Credentials: International Management (IU International University, Germany), TEFL, English for Business (YALI), Goethe Certificate. Felix started with a few online lessons, refined a practical method (simple explanations, targeted drills, steady feedback), and grew it into an academy and an app used by learners in Ghana and beyond.</p>
       </div>
-    </section>
-
-    <section id="terms-of-service">
-      <h2>Terms of Service</h2><button class="print" onclick="window.print()" aria-label="Print Terms of Service">Print</button>
       <div class="card">
-        <h3>1. Acceptance of Terms</h3>
-        <p>By accessing or using Falowen, you agree to these Terms of Service and the Privacy Policy. If you do not agree, do not use the Service.</p>
-        <h3>2. Eligibility & Accounts</h3>
+        <h3>Mission & Location</h3>
         <ul>
-          <li>The Service is for registered students, teachers, and authorized school staff.</li>
-          <li>Provide accurate registration information and keep it up to date.</li>
-          <li>You are responsible for safeguarding your login credentials and for activity under your account.</li>
+          <li><strong>Mission:</strong> Deliver affordable, effective German education and help students use German confidently in real life.</li>
+          <li><strong>Based:</strong> Ghana, West Africa. We offer in-person classes locally and online programs worldwide.</li>
+          <li><strong>Contact:</strong> <a href="https://api.whatsapp.com/message/EYMY3524WL6IC1?autoload=1&amp;app_absent=0" target="_blank" rel="noopener">Message us on WhatsApp</a></li>
         </ul>
-        <h3>3. Permitted Use & Responsibilities</h3>
-        <ul>
-          <li>Use the Service only for educational purposes and in compliance with applicable laws and school policies.</li>
-          <li>Do not share your account, attempt unauthorized access, upload malicious code, or disrupt learning.</li>
-        </ul>
-        <h3>4. Intellectual Property</h3>
-        <ul>
-          <li>The Service (content, software, features, and materials) is owned by Learn Language Education Academy or its licensors and protected by IP laws.</li>
-          <li>You may not copy, modify, redistribute, sell, or create derivative works except as permitted by law or with written permission.</li>
-        </ul>
-        <h3>5. User Content & License</h3>
-        <ul>
-          <li>You retain rights to your submissions (“User Content”).</li>
-          <li>You grant us a limited, non-exclusive, worldwide, royalty-free license to host, process, and display User Content solely to operate, secure, and improve the Service and provide feedback to you and your school.</li>
-        </ul>
-        <h3>6. Third-Party Services</h3>
-        <p>Certain features rely on third-party services (e.g., hosting, analytics, AI). Your use of those features may be subject to those providers’ terms, in addition to these Terms.</p>
-        <h3>7. Termination & Suspension</h3>
-        <p>We may suspend or terminate access (with notice where required) if you violate these Terms, misuse the Service, or if we discontinue the Service. You may stop using the Service at any time.</p>
-        <h3>8. Disclaimer of Warranties</h3>
-        <p>The Service is provided “AS IS” and “AS AVAILABLE” without warranties of any kind, express or implied, including merchantability, fitness for a particular purpose, and non-infringement. We do not warrant uninterrupted, secure, or error-free operation.</p>
-        <h3>9. Limitation of Liability</h3>
-        <p>To the fullest extent permitted by law, Learn Language Education Academy and its affiliates will not be liable for any indirect, incidental, special, consequential, or punitive damages, or any loss of data, profits, revenue, or business, arising from or related to your use of the Service.</p>
-        <h3>10. Indemnification</h3>
-        <p>You agree to indemnify and hold harmless Learn Language Education Academy and its affiliates from claims, losses, or damages arising from your breach of these Terms or misuse of the Service.</p>
-        <h3>11. Governing Law</h3>
-        <p>These Terms are governed by the laws of Ghana, without regard to conflict-of-law principles, unless the laws of your jurisdiction require otherwise.</p>
-        <h3>12. Changes to These Terms</h3>
-        <p>We may update these Terms. Material changes will be posted here with a new “Last updated” date. Continued use after changes take effect means you accept the updated Terms.</p>
-        <h3>13. Contact</h3>
-        <p>Questions about these Terms: <a href="mailto:learngermanghana@gmail.com">learngermanghana@gmail.com</a>.</p>
-        <p class="small"><em>These Terms are for information only and are not legal advice.</em></p>
       </div>
     </section>
 
