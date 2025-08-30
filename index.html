@@ -48,10 +48,7 @@
     "sameAs":["https://www.learngermanghana.com"]
   }
   </script>
-  <script type="application/ld+json">
-  {
-    "@context":"https://schema.org",
-    "@type":"FAQPage",
+  $1,
     "mainEntity":[
       {"@type":"Question","name":"When do I receive my Student Code?",
        "acceptedAnswer":{"@type":"Answer","text":"After payment is confirmed, you will receive an email with your Student Code and next steps. Check spam/junk if you don’t see it."}},
@@ -98,10 +95,11 @@
     h3 { margin-top:22px; }
     iframe { width:100%; height:80vh; border:0; border-radius:12px; box-shadow:0 1px 0 rgba(15,23,42,.06); }
     footer { border-top:1px solid var(--line); margin-top:36px; }
+    @media print{ nav.toc, .cta, .ribbon, .hero { display:none !important; } .card{ border:0; box-shadow:none; } a[href]:after{ content:" (" attr(href) ")"; font-size:.85em; } }
     .print{ display:inline-block; margin-left:10px; padding:6px 10px; border-radius:8px; border:1px solid var(--line); background:var(--surface); cursor:pointer; }
-    .print:hover{ border-color: var(--brand2); color: var(--brand2); }
-    @media print{ nav.toc, .cta, .ribbon, .hero, .print { display:none !important; } .card{ border:0; box-shadow:none; } a[href]:after{ content:" (" attr(href) ")"; font-size:.85em; } }
-  </style>
+  .print:hover{ border-color: var(--brand2); color: var(--brand2); }
+  @media print{ .print{ display:none !important; } }
+  $1
 </head>
 <body>
   <div class="ribbon"></div>
@@ -118,10 +116,8 @@
             <div class="org">by Learn Language Education Academy</div>
           </div>
         </div>
-        <div>
-          <a class="cta" href="#register">Register Now</a>
-          <a class="cta" href="https://api.whatsapp.com/message/EYMY3524WL6IC1?autoload=1&amp;app_absent=0" target="_blank" rel="noopener">Chat on WhatsApp</a>
-        </div>
+        <a class="cta" href="#register">Register Now</a>
+        <a class="cta" href="https://api.whatsapp.com/message/EYMY3524WL6IC1?autoload=1&amp;app_absent=0" target="_blank" rel="noopener">Chat on WhatsApp</a>
       </div>
       <div class="hero">
         <h1>Registration & Legal</h1>
@@ -132,7 +128,7 @@
           <a href="#privacy-policy">Privacy Policy</a>
           <a href="#terms-of-service">Terms of Service</a>
           <a href="#contact">Contact</a>
-          <a href="https://about.falowen.app/" target="_blank" rel="noopener">About Falowen</a>
+          <a href="#about-us">About Us</a>
         </nav>
       </div>
     </div>
@@ -148,11 +144,11 @@
     <section id="about-us">
       <h2>About Us</h2>
       <div class="card">
-        <p><strong>Falowen</strong> is a German learning platform by <strong>Learn Language Education Academy (LLEA)</strong> in Ghana. We help learners from <strong>A1 to B2</strong> build real world skills through structured practice, Goethe exam preparation, and clear, feedback driven lessons, online and in person.</p>
+        <p><strong>Falowen</strong> is a German learning platform by <strong>Learn Language Education Academy (LLEA)</strong> in Ghana. We help learners from <strong>A1 to B2</strong> build real world skills through structured practice, Goethe exam preparation, and clear, feedback driven lessons online and in person.</p>
       </div>
       <div class="card">
         <h3>Our Story</h3>
-        <p><strong>Founder:</strong> Felix Asadu. Credentials: International Management (IU International University, Germany), TEFL, English for Business (YALI), Goethe B2. Felix started with a few online lessons, refined a practical method (simple explanations, targeted drills, steady feedback), and grew it into an academy and an app used by learners in Ghana and beyond.</p>
+        <p><strong>Founder:</strong> Felix Asadu   Degree in International Management (IU International University, Germany) • TEFL certified • English for Business (YALI) • Goethe B2. Felix started with a few online lessons, refined a practical method (simple explanations + targeted drills + steady feedback), and grew it into an academy and an app used by learners in Ghana and beyond.</p>
       </div>
       <div class="card">
         <h3>Mission & Location</h3>
@@ -177,18 +173,17 @@
       </div>
     </section>
 
-    <section id="register">
-      <h2>Register Now</h2>
+    $1
       <div class="card">
         <h3>After You Register: What Happens Next</h3>
         <ol>
           <li><strong>Payment confirmation:</strong> We will verify your payment.</li>
-          <li><strong>Email sent to you:</strong> You will receive an email from Learn Language Education Academy containing your <strong>Student Code</strong> and confirmation to the same email you registered with. Check spam/junk if you do not see it.</li>
+          <li><strong>Email sent to you:</strong> You’ll receive an email from Learn Language Education Academy containing your <strong>Student Code</strong> and confirmation to the same email you registered with. Check spam/junk if you don’t see it.</li>
           <li><strong>Create your Falowen account:</strong> Go to <a href="https://www.falowen.com/" target="_blank" rel="noopener">www.falowen.com</a>, open the <strong>Login</strong> area, and click <strong>Sign up</strong>.</li>
           <li><strong>Use Student Code + Email:</strong> Sign up using your <strong>Student Code</strong> and <strong>email</strong>, then create your own <strong>unique password</strong>.</li>
-          <li><strong>Log in:</strong> After sign up, log in with your <strong>email</strong> and new <strong>password</strong> any time.</li>
+          <li><strong>Log in:</strong> After sign-up, log in with your <strong>email</strong> and new <strong>password</strong> any time.</li>
         </ol>
-        <p class="small">Need help or did not receive the email? Contact <a href="mailto:learngermanghana@gmail.com">learngermanghana@gmail.com</a>. Keep your Student Code and password secure—do not share them.</p>
+        <p class="small">Need help or didn’t receive the email? Contact <a href="mailto:learngermanghana@gmail.com">learngermanghana@gmail.com</a>. Keep your Student Code and password secure do not share them.</p>
       </div>
       <div class="card">
         <p>Complete the form below to register. Fees and start dates vary by level and cohort. Please confirm your level and cohort on the
@@ -202,8 +197,8 @@
       </div>
     </section>
 
-    <section id="payment-agreement">
-      <h2>Payment Agreement</h2><button class="print" onclick="window.print()" aria-label="Print Payment Agreement">Print</button>
+    $1
+      <button class="print" onclick="window.print()" aria-label="Print Payment Agreement">Print</button>
       <div class="card">
         <p>This Payment Agreement is entered into on <strong>[DATE]</strong> for <strong>[CLASS]</strong> students of Learn Language Education Academy and Felix Asadu (“Teacher”).</p>
         <h3>Terms of Payment</h3>
@@ -217,7 +212,7 @@
           <li><strong>Refunds:</strong> Once a deposit is made and a receipt is issued, <strong>no refunds</strong> will be provided
             <em>(except where required by law)</em>.</li>
         </ol>
-        <h3>Cancellation & Refund Policy</h3>
+        <h3>Cancellation &amp; Refund Policy</h3>
         <ol>
           <li>If the teacher cancels a lesson, it will be rescheduled.</li>
         </ol>
@@ -232,7 +227,7 @@
           <li><strong>Mobile Money:</strong> Number: <strong>0245022743</strong> · Name: <strong>Felix Asadu</strong></li>
           <li><strong>AccessBank (Cedis):</strong> Account Number: <strong>1050000008017</strong> · Name: <strong>Learn Language Education Academy</strong></li>
         </ul>
-        <h3>Class Level & Start Date</h3>
+        <h3>Class Level &amp; Start Date</h3>
         <p>Fees and dates vary by level and cohort. It is assumed that students have confirmed their level and start date via our
           <a href="https://www.learngermanghana.com/upcoming-classes" target="_blank" rel="noopener">Upcoming Classes</a> page before payment.</p>
         <p class="small"><em>By making any payment, you acknowledge and agree to the terms of this Payment Agreement.</em></p>
@@ -242,15 +237,14 @@
     <section id="privacy-policy">
       <h2>Privacy Policy</h2>
       <div class="card">
-        <h3>Who We Are & Scope</h3>
-        <p>We are committed to protecting your privacy. This Privacy Policy explains how we collect, use, disclose, and safeguard information when you use our website or app, including related tools and communications.</p>
+        $1
         <p><strong>Data controller:</strong> Learn Language Education Academy (Ghana).</p>
         <h3>Information We Collect</h3>
         <ul>
           <li><strong>Account Information:</strong> Name, email address, student code, and password.</li>
           <li><strong>Usage Data:</strong> Learning progress, scores, submissions, feedback, and in-app interactions.</li>
-          <li><strong>Device & Log Data:</strong> IP address, device type, OS, browser, timestamps, diagnostic logs.</li>
-          <li><strong>Cookies & Local Storage:</strong> Used for sessions, preferences, and performance (see “Cookies”).</li>
+          <li><strong>Device &amp; Log Data:</strong> IP address, device type, OS, browser, timestamps, diagnostic logs.</li>
+          <li><strong>Cookies &amp; Local Storage:</strong> Used for sessions, preferences, and performance (see “Cookies”).</li>
         </ul>
         <h3>How We Use Your Information</h3>
         <ul>
@@ -300,18 +294,18 @@
       </div>
     </section>
 
-    <section id="terms-of-service">
-      <h2>Terms of Service</h2><button class="print" onclick="window.print()" aria-label="Print Terms of Service">Print</button>
+    $1
+      <button class="print" onclick="window.print()" aria-label="Print Terms of Service">Print</button>
       <div class="card">
         <h3>1. Acceptance of Terms</h3>
         <p>By accessing or using Falowen, you agree to these Terms of Service and the Privacy Policy. If you do not agree, do not use the Service.</p>
-        <h3>2. Eligibility & Accounts</h3>
+        <h3>2. Eligibility &amp; Accounts</h3>
         <ul>
           <li>The Service is for registered students, teachers, and authorized school staff.</li>
           <li>Provide accurate registration information and keep it up to date.</li>
           <li>You are responsible for safeguarding your login credentials and for activity under your account.</li>
         </ul>
-        <h3>3. Permitted Use & Responsibilities</h3>
+        <h3>3. Permitted Use &amp; Responsibilities</h3>
         <ul>
           <li>Use the Service only for educational purposes and in compliance with applicable laws and school policies.</li>
           <li>Do not share your account, attempt unauthorized access, upload malicious code, or disrupt learning.</li>
@@ -321,14 +315,14 @@
           <li>The Service (content, software, features, and materials) is owned by Learn Language Education Academy or its licensors and protected by IP laws.</li>
           <li>You may not copy, modify, redistribute, sell, or create derivative works except as permitted by law or with written permission.</li>
         </ul>
-        <h3>5. User Content & License</h3>
+        <h3>5. User Content &amp; License</h3>
         <ul>
           <li>You retain rights to your submissions (“User Content”).</li>
           <li>You grant us a limited, non-exclusive, worldwide, royalty-free license to host, process, and display User Content solely to operate, secure, and improve the Service and provide feedback to you and your school.</li>
         </ul>
         <h3>6. Third-Party Services</h3>
         <p>Certain features rely on third-party services (e.g., hosting, analytics, AI). Your use of those features may be subject to those providers’ terms, in addition to these Terms.</p>
-        <h3>7. Termination & Suspension</h3>
+        <h3>7. Termination &amp; Suspension</h3>
         <p>We may suspend or terminate access (with notice where required) if you violate these Terms, misuse the Service, or if we discontinue the Service. You may stop using the Service at any time.</p>
         <h3>8. Disclaimer of Warranties</h3>
         <p>The Service is provided “AS IS” and “AS AVAILABLE” without warranties of any kind, express or implied, including merchantability, fitness for a particular purpose, and non-infringement. We do not warrant uninterrupted, secure, or error-free operation.</p>
@@ -345,7 +339,6 @@
         <p class="small"><em>These Terms are for information only and are not legal advice.</em></p>
       </div>
     </section>
-
     <section id="contact">
       <h2>Contact</h2>
       <div class="card">
@@ -355,14 +348,13 @@
       </div>
     </section>
 
-    <footer class="wrap">
-      <p class="small">© <span id="y"></span> Learn Language Education Academy • Falowen</p>
+    $1
       <nav class="small">
         <a href="#register">Register</a> ·
         <a href="#payment-agreement">Payment</a> ·
         <a href="#privacy-policy">Privacy</a> ·
         <a href="#terms-of-service">Terms</a> ·
-        <a href="https://about.falowen.app/" target="_blank" rel="noopener">About</a> ·
+        <a href="#about-us">About</a> ·
         <a href="https://www.learngermanghana.com/upcoming-classes" target="_blank" rel="noopener">Upcoming Classes</a>
       </nav>
       <script>document.getElementById('y').textContent = new Date().getFullYear();</script>
