@@ -96,6 +96,8 @@
     .meta { color:var(--muted); }
     .cta { display:inline-block; padding:10px 14px; border-radius:999px; text-decoration:none; background:linear-gradient(90deg,var(--brand),var(--brand2)); color:#fff; font-weight:700; }
     .cta:focus-visible { outline:2px solid var(--brand2); outline-offset:2px; }
+    .cta--wide{display:block;text-align:center;margin:6px 0;padding:12px 16px;font-size:1.05rem}
+    code{background:var(--surface);border:1px solid var(--line);padding:2px 6px;border-radius:6px;word-break:break-all}
     nav.toc { display:flex; gap:10px; flex-wrap:nowrap; overflow-x:auto; white-space:nowrap; margin-top:8px; padding-bottom:4px; }
     nav.toc a { color:var(--muted); text-decoration:none; padding:6px 10px; border:1px solid var(--line); border-radius:999px; flex:0 0 auto; }
     nav.toc a:hover { color:var(--brand2); border-color:var(--brand2); }
@@ -175,8 +177,12 @@
           <a href="#terms-of-service">Terms of Service</a>, and <a href="#payment-agreement">Payment Agreement</a>.</p>
       </div>
       <div class="card">
-        <iframe src="https://docs.google.com/forms/d/e/1FAIpQLSenGQa9RnK9IgHbAn1I9rSbWfxnztEUcSjV0H-VFLT-jkoZHA/viewform?embedded=true" title="Falowen Registration Form">Loading…</iframe>
-        <p class="small">If the form does not load, <a href="https://docs.google.com/forms/d/e/1FAIpQLSenGQa9RnK9IgHbAn1I9rSbWfxnztEUcSjV0H-VFLT-jkoZHA/viewform?usp=sf_link" target="_blank" rel="noopener">open it in a new tab</a>.</p>
+        <h3>Fill the Form in a New Tab</h3>
+        <p>For the best experience, open the registration form in a separate tab and complete it there:</p>
+        <p><a class="cta cta--wide" href="https://docs.google.com/forms/d/e/1FAIpQLSenGQa9RnK9IgHbAn1I9rSbWfxnztEUcSjV0H-VFLT-jkoZHA/viewform?usp=sf_link" target="_blank" rel="noopener">Open Registration Form</a></p>
+        <p class="small">If it doesn’t open, copy this link:<br>
+          <code>https://docs.google.com/forms/d/e/1FAIpQLSenGQa9RnK9IgHbAn1I9rSbWfxnztEUcSjV0H-VFLT-jkoZHA/viewform?usp=sf_link</code>
+        </p>
       </div>
     </section>
 
