@@ -77,25 +77,29 @@
     .card { background:var(--surface); border:1px solid var(--line); border-radius:16px; padding:16px; margin:12px 0; }
     .small { font-size:.92rem; color:var(--muted); }
     .ribbon { height:4px; background: linear-gradient(90deg, var(--brand), var(--brand2)); }
+    /* Lean sticky header (brandbar only) */
     header { position:sticky; top:0; background:rgba(255,255,255,.92); backdrop-filter:saturate(1.2) blur(6px); border-bottom:1px solid var(--line); z-index:20; }
     @media (prefers-color-scheme: dark){ header { background:rgba(11,16,32,.85); } }
-    .brandbar { display:flex; align-items:center; justify-content:space-between; gap:16px; }
+    .brandbar { display:flex; align-items:center; justify-content:space-between; gap:16px; min-height:56px; }
     .brand-left { display:flex; align-items:center; gap:12px; min-width:0; }
     .logos { display:flex; align-items:center; gap:10px; }
     .badge { width:40px; height:40px; border-radius:12px; display:grid; place-items:center; color:#fff; font-weight:700; letter-spacing:.5px; }
     .badge--fal { background:var(--brand); }
     .badge--acad{ background:var(--brand2); }
     .wordmarks { display:flex; flex-direction:column; gap:2px; min-width:0; }
-    .product { font-weight:800; font-size:1.1rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-    .org { color:var(--muted); font-size:.95rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-    .hero { margin-top:12px; background: radial-gradient(1200px 240px at 10% -20%, rgba(14,165,233,.20), transparent 60%), radial-gradient(1200px 240px at 90% -20%, rgba(29,78,216,.18), transparent 60%); border:1px solid var(--line); border-radius:16px; padding:18px; }
+    .product { font-weight:800; font-size:1.05rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .org { color:var(--muted); font-size:.92rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+
+    /* Hero is no longer sticky: placed outside header */
+    .hero { margin:12px auto 0; max-width:var(--max); background: radial-gradient(1200px 240px at 10% -20%, rgba(14,165,233,.20), transparent 60%), radial-gradient(1200px 240px at 90% -20%, rgba(29,78,216,.18), transparent 60%); border:1px solid var(--line); border-radius:16px; padding:18px; }
     .hero h1 { margin:0 0 6px 0; font-size:clamp(1.6rem, 2.8vw, 2.2rem); }
     .meta { color:var(--muted); }
     .cta { display:inline-block; padding:10px 14px; border-radius:999px; text-decoration:none; background:linear-gradient(90deg,var(--brand),var(--brand2)); color:#fff; font-weight:700; }
     .cta:focus-visible { outline:2px solid var(--brand2); outline-offset:2px; }
-    nav.toc { display:flex; gap:10px; flex-wrap:wrap; margin-top:8px; }
-    nav.toc a { color:var(--muted); text-decoration:none; padding:6px 10px; border:1px solid var(--line); border-radius:999px; }
+    nav.toc { display:flex; gap:10px; flex-wrap:nowrap; overflow-x:auto; white-space:nowrap; margin-top:8px; padding-bottom:4px; }
+    nav.toc a { color:var(--muted); text-decoration:none; padding:6px 10px; border:1px solid var(--line); border-radius:999px; flex:0 0 auto; }
     nav.toc a:hover { color:var(--brand2); border-color:var(--brand2); }
+
     main { max-width:var(--max); margin:20px auto; padding:0 16px; }
     h2 { margin-top:32px; border-top:1px solid var(--line); padding-top:24px; }
     h3 { margin-top:22px; }
@@ -103,18 +107,24 @@
     footer { border-top:1px solid var(--line); margin-top:36px; }
     .print{ display:inline-block; margin-left:10px; padding:6px 10px; border-radius:8px; border:1px solid var(--line); background:var(--surface); cursor:pointer; }
     .print:hover{ border-color: var(--brand2); color: var(--brand2); }
+
+    /* Make anchor jumps account for sticky header */
+    section { scroll-margin-top: 96px; }
+
     @media print{ nav.toc, .cta, .ribbon, .hero, .print { display:none !important; } .card{ border:0; box-shadow:none; } a[href]:after{ content:" (" attr(href) ")"; font-size:.85em; } }
   </style>
 </head>
 <body>
-  <div class="ribbon"></div>
+  <div class="ribbon" aria-hidden="true"></div>
+
+  <!-- Slim sticky header (brandbar only) -->
   <header>
     <div class="wrap">
       <div class="brandbar" aria-label="Brand header">
         <div class="brand-left">
-          <div class="logos">
-            <div class="badge badge--fal" aria-hidden="true">F</div>
-            <div class="badge badge--acad" aria-hidden="true">LL</div>
+          <div class="logos" aria-hidden="true">
+            <div class="badge badge--fal">F</div>
+            <div class="badge badge--acad">LL</div>
           </div>
           <div class="wordmarks">
             <div class="product">Falowen</div>
@@ -126,60 +136,25 @@
           <a class="cta" href="https://api.whatsapp.com/message/EYMY3524WL6IC1?autoload=1&amp;app_absent=0" target="_blank" rel="noopener">Chat on WhatsApp</a>
         </div>
       </div>
-      <div class="hero">
-        <h1>Registration & Legal</h1>
-        <div class="meta">Last updated: July 27, 2025</div>
-        <nav class="toc" aria-label="Section navigation">
-          <a href="#about-us">About Us</a>
-          <a href="#register">Register Now</a>
-          <a href="#payment-agreement">Payment Agreement</a>
-          <a href="#privacy-policy">Privacy Policy</a>
-          <a href="#terms-of-service">Terms of Service</a>
-          <a href="#contact">Contact</a>
-        </nav>
-      </div>
     </div>
   </header>
+
+  <!-- Non-sticky hero + compact quick links -->
+  <section class="hero" aria-label="Intro">
+    <h1>Register & Legal</h1>
+    <div class="meta">Last updated: July 27, 2025</div>
+    <nav class="toc" aria-label="Quick links">
+      <a href="#register">Register</a>
+      <a href="#payment-agreement">Payment</a>
+      <a href="#privacy-policy">Privacy</a>
+      <a href="#terms-of-service">Terms</a>
+      <a href="#about-us">About</a>
+      <a href="#contact">Contact</a>
+    </nav>
+  </section>
+
   <main>
-    <section id="intro" class="card">
-      <p>Learn Language Education Academy (“we”, “us”, or “our”) operates the Falowen website and app (the “Service”). This page includes registration plus our Payment Agreement, Privacy Policy, and Terms of Service.</p>
-      <p class="small">Tip: Confirm your level & start date here before registering:
-        <a href="https://www.learngermanghana.com/upcoming-classes" target="_blank" rel="noopener">Upcoming Classes</a>.
-      </p>
-    </section>
-
-    <section id="about-us">
-      <h2>About Us</h2>
-      <div class="card">
-        <p><strong>Falowen</strong> is a German learning platform by <strong>Learn Language Education Academy (LLEA)</strong> in Ghana. We help learners from <strong>A1 to B2</strong> build real world skills through structured practice, Goethe exam preparation, and clear, feedback driven lessons, online and in person.</p>
-      </div>
-      <div class="card">
-        <h3>Our Story</h3>
-        <p><strong>Founder:</strong> Felix Asadu. Credentials: International Management (IU International University, Germany), TEFL, English for Business (YALI), Goethe B2. Felix started with a few online lessons, refined a practical method (simple explanations, targeted drills, steady feedback), and grew it into an academy and an app used by learners in Ghana and beyond.</p>
-      </div>
-      <div class="card">
-        <h3>Mission & Location</h3>
-        <ul>
-          <li><strong>Mission:</strong> Deliver affordable, effective German education and help students use German confidently in real life.</li>
-          <li><strong>Based:</strong> Ghana, West Africa. We offer in person classes locally and online programs worldwide.</li>
-          <li><strong>Contact:</strong> <a href="https://api.whatsapp.com/message/EYMY3524WL6IC1?autoload=1&amp;app_absent=0" target="_blank" rel="noopener">Message us on WhatsApp</a></li>
-        </ul>
-      </div>
-    </section>
-
-    <section id="school-info">
-      <h2>School info</h2>
-      <div class="card">
-        <ul>
-          <li><strong>Business name:</strong> Learn Language Education Academy (Falowen)</li>
-          <li><strong>Country:</strong> Ghana, West Africa</li>
-          <li><strong>Owner:</strong> Felix Asadu</li>
-          <li><strong>Credentials:</strong> International Management (IU International University, Germany), TEFL, English for Business (YALI), Goethe B2</li>
-          <li><strong>Contact:</strong> <a href="mailto:learngermanghana@gmail.com">learngermanghana@gmail.com</a> · <a href="https://api.whatsapp.com/message/EYMY3524WL6IC1?autoload=1&amp;app_absent=0" target="_blank" rel="noopener">WhatsApp</a></li>
-        </ul>
-      </div>
-    </section>
-
+    <!-- 1) REGISTER FIRST -->
     <section id="register">
       <h2>Register Now</h2>
       <div class="card">
@@ -187,8 +162,8 @@
         <ol>
           <li><strong>Payment confirmation:</strong> We will verify your payment.</li>
           <li><strong>Email sent to you:</strong> You will receive an email from Learn Language Education Academy containing your <strong>Student Code</strong> and confirmation to the same email you registered with. Check spam/junk if you do not see it.</li>
-          <li><strong>Create your Falowen account:</strong> Go to <a href="https://www.falowen.com/" target="_blank" rel="noopener">www.falowen.com</a>, open the <strong>Login</strong> area, and click <strong>Sign up</strong>.</li>
-          <li><strong>Use Student Code + Email:</strong> Sign up using your <strong>Student Code</strong> and <strong>email</strong>, then create your own <strong>unique password</strong>.</li>
+          <li><strong>Create your Falowen account:</strong> Go to <a href="https://www.falowen.com/" target="_blank" rel="noopener">www.falowen.com</a>, open <strong>Login</strong>, and click <strong>Sign up</strong>.</li>
+          <li><strong>Use Student Code + Email:</strong> Sign up using your <strong>Student Code</strong> and <strong>email</strong>, then create a <strong>unique password</strong>.</li>
           <li><strong>Log in:</strong> After sign up, log in with your <strong>email</strong> and new <strong>password</strong> any time.</li>
         </ol>
         <p class="small">Need help or did not receive the email? Contact <a href="mailto:learngermanghana@gmail.com">learngermanghana@gmail.com</a>. Keep your Student Code and password secure—do not share them.</p>
@@ -205,6 +180,15 @@
       </div>
     </section>
 
+    <!-- 2) SIMPLE INTRO (moved below Register) -->
+    <section id="intro" class="card">
+      <p>Learn Language Education Academy (“we”, “us”, or “our”) operates the Falowen website and app (the “Service”). This page includes registration plus our Payment Agreement, Privacy Policy, and Terms of Service.</p>
+      <p class="small">Tip: Confirm your level & start date here before registering:
+        <a href="https://www.learngermanghana.com/upcoming-classes" target="_blank" rel="noopener">Upcoming Classes</a>.
+      </p>
+    </section>
+
+    <!-- 3) LEGALS -->
     <section id="payment-agreement">
       <h2>Payment Agreement</h2><button class="print" onclick="window.print()" aria-label="Print Payment Agreement">Print</button>
       <div class="card">
@@ -349,6 +333,38 @@
       </div>
     </section>
 
+    <!-- 4) ABOUT (moved down, neutral tone) -->
+    <section id="about-us">
+      <h2>About Us</h2>
+      <div class="card">
+        <p><strong>Falowen</strong> is a German learning platform by <strong>Learn Language Education Academy (LLEA)</strong> in Ghana. We help learners from <strong>A1 to B2</strong> build real‑world skills through structured practice, Goethe exam preparation, and clear, feedback‑driven lessons—online and in person.</p>
+      </div>
+      <div class="card">
+        <h3>Our Story</h3>
+      <div class="card">
+        <h3>Mission & Location</h3>
+        <ul>
+          <li><strong>Mission:</strong> Deliver affordable, effective German education and help students use German confidently in real life.</li>
+          <li><strong>Based:</strong> Ghana, West Africa. We offer in‑person classes locally and online programs worldwide.</li>
+          <li><strong>Contact:</strong> <a href="https://api.whatsapp.com/message/EYMY3524WL6IC1?autoload=1&amp;app_absent=0" target="_blank" rel="noopener">Message us on WhatsApp</a></li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- 5) SCHOOL INFO (Owner → Founder) -->
+    <section id="school-info">
+      <h2>School Info</h2>
+      <div class="card">
+        <ul>
+          <li><strong>Business name:</strong> Learn Language Education Academy (Falowen)</li>
+          <li><strong>Country:</strong> Ghana, West Africa</li>
+          <li><strong>Founder:</strong> Felix Asadu</li>
+          <li><strong>Contact:</strong> <a href="mailto:learngermanghana@gmail.com">learngermanghana@gmail.com</a> · <a href="https://api.whatsapp.com/message/EYMY3524WL6IC1?autoload=1&amp;app_absent=0" target="_blank" rel="noopener">WhatsApp</a></li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- 6) CONTACT -->
     <section id="contact">
       <h2>Contact</h2>
       <div class="card">
@@ -361,11 +377,11 @@
     <footer class="wrap">
       <p class="small">© <span id="y"></span> Learn Language Education Academy • Falowen</p>
       <nav class="small">
-        <a href="#about-us">About</a> ·
         <a href="#register">Register</a> ·
         <a href="#payment-agreement">Payment</a> ·
         <a href="#privacy-policy">Privacy</a> ·
         <a href="#terms-of-service">Terms</a> ·
+        <a href="#about-us">About</a> ·
         <a href="https://www.learngermanghana.com/upcoming-classes" target="_blank" rel="noopener">Upcoming Classes</a>
       </nav>
       <script>document.getElementById('y').textContent = new Date().getFullYear();</script>
