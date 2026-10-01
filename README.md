@@ -1,6 +1,6 @@
-# Falowen — Register subdomain (GitHub Pages)
+# Falowen — Enrollment Agreement & Policies (GitHub Pages)
 
-This package serves a single page at **register.falowen.app** with: Register, Payment Agreement, Privacy, and Terms.
+This package serves a single public reference page at **register.falowen.app** for the Falowen Enrollment Agreement, Payment Agreement, Privacy Policy, Terms of Service, enrollment guidance, FAQ, and contact information. Student registration and class-specific enrollment data live in Falowen; this GitHub Pages site does not maintain a separate student registration system.
 
 ## Deploy
 1. Create/choose your GitHub repo and upload these files.
