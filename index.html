@@ -233,14 +233,11 @@
   <section class="hero" aria-label="Intro">
     <h1>Enrollment Agreement & Policies</h1>
     <div class="meta">Last updated: October 1, 2026</div>
-    <nav class="toc" aria-label="Quick links">
-      <a href="#payment-agreement">Agreement</a>
-      <a href="#register">How to Enroll</a>
+    <nav class="toc" aria-label="Legal sections">
+      <a href="#payment-agreement">Enrollment Agreement</a>
+      <a href="#payment-terms">Payment Terms</a>
       <a href="#privacy-policy">Privacy</a>
-      <a href="#terms-of-service">Terms</a>
-      <a href="#faq">FAQ</a>
-      <a href="#about-us">About</a>
-      <a href="#contact">Contact</a>
+      <a href="#terms-of-service">Terms of Service</a>
     </nav>
   </section>
 
@@ -278,17 +275,17 @@
 
     <!-- Intro -->
     <section id="intro" class="card">
-      <p>Learn Language Education Academy (“we”, “us”, or “our”) operates the Falowen website and app (the “Service”). This page is the public reference for the Falowen Enrollment Agreement, Payment Agreement, Privacy Policy, and Terms of Service.</p>
+      <p>Learn Language Education Academy (“we”, “us”, or “our”) operates Falowen (the “Service”). This page is the public reference for four core areas: the <strong>Enrollment Agreement</strong>, <strong>Payment Terms</strong>, <strong>Privacy Policy</strong>, and <strong>Terms of Service</strong>.</p>
       <p class="small"><strong>Class-specific information is managed in Falowen.</strong> Your selected class or account is the source of truth for fees, start dates, payment balances, class assignment, and access period.</p>
     </section>
 
     <!-- Payment Agreement -->
     <section id="payment-agreement">
-      <h2>Payment Agreement</h2><button class="print" onclick="window.print()" aria-label="Print Payment Agreement">Print</button>
+      <h2>Enrollment Agreement</h2><button class="print" onclick="window.print()" aria-label="Print Payment Agreement">Print</button>
       <div class="card">
         <p>This Payment Agreement is entered into on <strong>[DATE]</strong> for <strong>[CLASS]</strong> students of Learn Language Education Academy and Felix Asadu (“Teacher”).</p>
 
-        <h3>Terms of Payment</h3>
+        <h3 id="payment-terms">Payment Terms</h3>
         <ol>
           <li><strong>Payment Amount:</strong> The student agrees to pay the teacher a total of <strong>[AMOUNT]</strong> GHS for the course. <em>The fee is the same regardless of learning mode (online, in person, self-learning, or recorded lectures).</em></li>
           <li><strong>Payment Schedule:</strong> Payment may be made in full or in two installments: first installment of <strong>GHS [FIRST_INSTALLMENT]</strong>, and the remaining balance due <strong>one month</strong> after the first payment.</li>
@@ -324,9 +321,9 @@
         <h3>Information We Collect</h3>
         <ul>
           <li><strong>Account Information:</strong> Name, email address, and password.</li>
-          <li><strong>Payment & Enrollment Data:</strong> Enrollment records, receipts, and payment confirmations.</li>
-          <li><strong>Usage Data:</strong> Learning progress, scores, submissions, feedback, attendance records, and in-app interactions.</li>
-          <li><strong>Device & Log Data:</strong> IP address, device type, OS, browser, timestamps, diagnostic logs.</li>
+          <li><strong>Payment & Enrollment Data:</strong> Selected class, enrollment status, payment intent, balance, receipts, and payment confirmations. Payment card or mobile-money credentials are handled by the payment provider rather than stored by Falowen where the provider processes them directly.</li>
+          <li><strong>Usage & Learning Data:</strong> Learning progress, scores, workbook and assignment submissions, tutor feedback, attendance, presentation or speaking activity, course progress, and in-app interactions.</li>
+          <li><strong>Device & Log Data:</strong> IP address, device type, operating system, browser, timestamps, session and diagnostic information used for reliability, security, and troubleshooting.</li>
           <li><strong>Cookies & Local Storage:</strong> Used for sessions, preferences, and performance (see “Cookies”).</li>
         </ul>
 
@@ -341,6 +338,8 @@
           <li>Monitor, secure, and improve the Service.</li>
           <li>Comply with legal obligations and enforce our Terms.</li>
         </ul>
+        <h3>AI-Assisted Features</h3>
+        <p>Falowen may use AI-assisted features for learning support, feedback, content guidance, or administrative workflows. When an AI feature is used, only information reasonably needed to provide that feature should be processed. Students should avoid entering unnecessary sensitive personal information into free-text learning or AI tools.</p>
 
         <h3>Legal Bases (EEA/UK)</h3>
         <p>Where the GDPR applies, we rely on <strong>contract</strong>, <strong>legitimate interests</strong> (e.g., security, optimization),
@@ -350,7 +349,7 @@
         <ul>
           <li><strong>No sale of data:</strong> We do not sell personal information.</li>
           <li><strong>Teachers/School Staff:</strong> Data may be visible to teachers or authorized staff to run classes and assess progress.</li>
-          <li><strong>Service Providers (Processors):</strong> Trusted vendors help operate the Service (e.g., Google/Firebase/Google Cloud, hosting providers, and communication tools such as email and Telegram). They are bound to protect data and not use it for advertising.</li>
+          <li><strong>Service Providers (Processors):</strong> We use trusted infrastructure and service providers to operate Falowen. These may include Google/Firebase services for authentication, application data and backend functions; hosting and delivery providers; Cloudflare services for supported media storage and delivery; Paystack for payment processing; email delivery services; and other communication or learning tools enabled in Falowen. Providers process data only as needed to provide their services and are subject to their own security and privacy obligations.</li>
           <li><strong>Legal/Compliance:</strong> We may disclose information to comply with laws or protect rights.</li>
         </ul>
 
@@ -420,7 +419,7 @@
         </ul>
 
         <h3>6. Third-Party Services</h3>
-        <p>Certain features rely on third-party services (e.g., hosting, analytics, AI, and messaging such as email and Telegram). Your use of those features may be subject to those providers’ terms, in addition to these Terms.</p>
+        <p>Certain features rely on third-party services such as authentication and cloud infrastructure, hosting and content delivery, payment processing, email delivery, media storage, and AI-assisted learning or feedback features where enabled. Your use of those features may also be subject to the relevant provider’s terms.</p>
 
         <h3>7. Termination & Suspension</h3>
         <p>We may suspend or terminate access (with notice where required) if you violate these Terms, misuse the Service, or if we discontinue the Service. You may stop using the Service at any time.</p>
